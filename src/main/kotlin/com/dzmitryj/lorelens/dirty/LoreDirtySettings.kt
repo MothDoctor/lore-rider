@@ -21,7 +21,7 @@ class LoreDirtySettings : PersistentStateComponent<LoreDirtySettings.State> {
          */
         var scannedInstances: MutableSet<String> = mutableSetOf(),
         /** The GitLens-style end-of-line blame hint on the caret line. */
-        var showBlameHint: Boolean = true,
+        var showBlameHint: Boolean = false,
     )
 
     private var state = State()
