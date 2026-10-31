@@ -1,4 +1,4 @@
-// Generated from lore.h 0.8.6 by :codegen. Do not edit.
+// Generated from lore.h 0.12.0 by :codegen. Do not edit.
 package com.dzmitryj.lorelens.ffi.generated
 
 import java.lang.foreign.MemoryLayout
@@ -149,8 +149,9 @@ object lore_auth_local_user_info_args_t {
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         lore_string_t.LAYOUT.withName("auth_endpoint"),
         lore_string_array_t.LAYOUT.withName("user_ids"),
-        ValueLayout.JAVA_BYTE.withName("with_token"),
-        MemoryLayout.paddingLayout(7),
+        ValueLayout.JAVA_BYTE.withName("with_identity_token"),
+        ValueLayout.JAVA_BYTE.withName("with_access_token"),
+        MemoryLayout.paddingLayout(6),
     ).withName("lore_auth_local_user_info_args_t") as StructLayout
 
     /**
@@ -168,13 +169,24 @@ object lore_auth_local_user_info_args_t {
         struct.asSlice(OFFSET_user_ids, 16L)
 
     /**
-     * Emit cached token details for identities with a local token
+     * Emit cached identity token details for identities with a local token
      */
-    const val OFFSET_with_token: Long = 32L
-    fun with_token(struct: MemorySegment): Byte =
-        struct.get(ValueLayout.JAVA_BYTE, OFFSET_with_token)
-    fun with_token(struct: MemorySegment, value: Byte) {
-        struct.set(ValueLayout.JAVA_BYTE, OFFSET_with_token, value)
+    const val OFFSET_with_identity_token: Long = 32L
+    fun with_identity_token(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_with_identity_token)
+    fun with_identity_token(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_with_identity_token, value)
+    }
+
+    /**
+     * Emit the repository's authorization (access) token. Requires running
+     * inside a repository
+     */
+    const val OFFSET_with_access_token: Long = 33L
+    fun with_access_token(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_with_access_token)
+    fun with_access_token(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_with_access_token, value)
     }
 }
 
@@ -213,7 +225,7 @@ object lore_auth_login_interactive_args_t {
  * Arguments for authenticating against a remote URL using a provided token.
  */
 object lore_auth_login_with_token_args_t {
-    const val SIZE: Long = 64L
+    const val SIZE: Long = 96L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -221,6 +233,8 @@ object lore_auth_login_with_token_args_t {
         lore_string_t.LAYOUT.withName("token"),
         lore_string_t.LAYOUT.withName("token_type"),
         lore_string_t.LAYOUT.withName("auth_url"),
+        lore_string_t.LAYOUT.withName("client_id"),
+        lore_string_t.LAYOUT.withName("client_secret"),
     ).withName("lore_auth_login_with_token_args_t") as StructLayout
 
     /**
@@ -251,6 +265,22 @@ object lore_auth_login_with_token_args_t {
     const val OFFSET_auth_url: Long = 48L
     fun auth_url(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_auth_url, 16L)
+
+    /**
+     * Client ID of a confidential client registered with the auth service. When
+     * non-empty, logs in as that client with `client_secret`, and `token` and
+     * `token_type` must be empty
+     */
+    const val OFFSET_client_id: Long = 64L
+    fun client_id(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_client_id, 16L)
+
+    /**
+     * Secret of the client `client_id` names
+     */
+    const val OFFSET_client_secret: Long = 80L
+    fun client_secret(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_client_secret, 16L)
 }
 
 /**
@@ -289,14 +319,62 @@ object lore_auth_logout_args_t {
 }
 
 /**
+ * Event data for one wait in an interactive login: the user has not
+ * approved it yet, and the client is about to wait `interval_secs` before
+ * asking again. Emitted once per poll, so a consumer can show that the
+ * login is still in progress against a provider with a long interval.
+ */
+object lore_auth_pending_event_data_t {
+    const val SIZE: Long = 24L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("elapsed_secs"),
+        ValueLayout.JAVA_LONG.withName("interval_secs"),
+        ValueLayout.JAVA_LONG.withName("remaining_secs"),
+    ).withName("lore_auth_pending_event_data_t") as StructLayout
+
+    /**
+     * Whole seconds since polling began.
+     */
+    const val OFFSET_elapsed_secs: Long = 0L
+    fun elapsed_secs(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_elapsed_secs)
+    fun elapsed_secs(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_elapsed_secs, value)
+    }
+
+    /**
+     * Whole seconds until the next poll.
+     */
+    const val OFFSET_interval_secs: Long = 8L
+    fun interval_secs(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_interval_secs)
+    fun interval_secs(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_interval_secs, value)
+    }
+
+    /**
+     * Whole seconds left before the session expires unapproved.
+     */
+    const val OFFSET_remaining_secs: Long = 16L
+    fun remaining_secs(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_remaining_secs)
+    fun remaining_secs(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_remaining_secs, value)
+    }
+}
+
+/**
  * Event data carrying an authentication URL for the user to open.
  */
 object lore_auth_url_event_data_t {
-    const val SIZE: Long = 16L
+    const val SIZE: Long = 32L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         lore_string_t.LAYOUT.withName("url"),
+        lore_string_t.LAYOUT.withName("user_code"),
     ).withName("lore_auth_url_event_data_t") as StructLayout
 
     /**
@@ -305,10 +383,18 @@ object lore_auth_url_event_data_t {
     const val OFFSET_url: Long = 0L
     fun url(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_url, 16L)
+
+    /**
+     * Code the user enters or confirms at `url`. Empty when the login
+     * doesn't ask for one.
+     */
+    const val OFFSET_user_code: Long = 16L
+    fun user_code(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_user_code, 16L)
 }
 
 /**
- * Arguments for resolving user IDs to display names via the remote auth service.
+ * Arguments for resolving user IDs to display names via the remote user service.
  */
 object lore_auth_user_info_args_t {
     const val SIZE: Long = 16L
@@ -421,6 +507,11 @@ object lore_auth_user_token_event_data_t {
 
 /**
  * A block of raw bytes described by a pointer and a length.
+ * 
+ * Owns its payload: [`Self::from_bytes`] copies into a fresh allocation and
+ * `Drop` frees it, so a value carried in an event stays valid without the
+ * producer having to outlive the dispatch. An empty block is a NULL pointer
+ * with length 0.
  */
 object lore_binary_t {
     const val SIZE: Long = 16L
@@ -456,11 +547,17 @@ object lore_binary_t {
  * Arguments for archiving a branch locally and (unless local mode) on the remote.
  */
 object lore_branch_archive_args_t {
-    const val SIZE: Long = 16L
+    const val SIZE: Long = 64L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         lore_string_t.LAYOUT.withName("branch"),
+        lore_string_t.LAYOUT.withName("layer"),
+        ValueLayout.JAVA_BYTE.withName("include_layers"),
+        MemoryLayout.paddingLayout(7),
+        lore_string_t.LAYOUT.withName("link"),
+        ValueLayout.JAVA_BYTE.withName("include_links"),
+        MemoryLayout.paddingLayout(7),
     ).withName("lore_branch_archive_args_t") as StructLayout
 
     /**
@@ -469,6 +566,40 @@ object lore_branch_archive_args_t {
     const val OFFSET_branch: Long = 0L
     fun branch(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_branch, 16L)
+
+    /**
+     * If set, archive only in this layer (mount path relative to repo root)
+     */
+    const val OFFSET_layer: Long = 16L
+    fun layer(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_layer, 16L)
+
+    /**
+     * Also archive the branch in every configured layer
+     */
+    const val OFFSET_include_layers: Long = 32L
+    fun include_layers(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_include_layers)
+    fun include_layers(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_include_layers, value)
+    }
+
+    /**
+     * If set, archive only in this link (mount path relative to repo root)
+     */
+    const val OFFSET_link: Long = 40L
+    fun link(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_link, 16L)
+
+    /**
+     * Also archive the branch in every configured link
+     */
+    const val OFFSET_include_links: Long = 56L
+    fun include_links(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_include_links)
+    fun include_links(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_include_links, value)
+    }
 }
 
 /**
@@ -615,22 +746,67 @@ object lore_branch_diff_args_t {
  * Event data reported at the start of a branch diff.
  */
 object lore_branch_diff_begin_event_data_t {
-    const val SIZE: Long = 4L
-    const val ALIGNMENT: Long = 4L
+    const val SIZE: Long = 160L
+    const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_INT.withName("_unused"),
+        lore_context_t.LAYOUT.withName("source_branch"),
+        lore_string_t.LAYOUT.withName("source_branch_name"),
+        lore_hash_t.LAYOUT.withName("source_revision"),
+        lore_context_t.LAYOUT.withName("target_branch"),
+        lore_string_t.LAYOUT.withName("target_branch_name"),
+        lore_hash_t.LAYOUT.withName("target_revision"),
+        lore_hash_t.LAYOUT.withName("base_revision"),
     ).withName("lore_branch_diff_begin_event_data_t") as StructLayout
 
     /**
-     * Unused placeholder field.
+     * Identifier of the source branch of the diff.
      */
-    const val OFFSET__unused: Long = 0L
-    fun _unused(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET__unused)
-    fun _unused(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET__unused, value)
-    }
+    const val OFFSET_source_branch: Long = 0L
+    fun source_branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_source_branch, 16L)
+
+    /**
+     * Name of the source branch.
+     */
+    const val OFFSET_source_branch_name: Long = 16L
+    fun source_branch_name(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_source_branch_name, 16L)
+
+    /**
+     * Revision of the source branch used in the diff.
+     */
+    const val OFFSET_source_revision: Long = 32L
+    fun source_revision(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_source_revision, 32L)
+
+    /**
+     * Identifier of the target branch of the diff.
+     */
+    const val OFFSET_target_branch: Long = 64L
+    fun target_branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_target_branch, 16L)
+
+    /**
+     * Name of the target branch.
+     */
+    const val OFFSET_target_branch_name: Long = 80L
+    fun target_branch_name(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_target_branch_name, 16L)
+
+    /**
+     * Revision of the target branch used in the diff.
+     */
+    const val OFFSET_target_revision: Long = 96L
+    fun target_revision(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_target_revision, 32L)
+
+    /**
+     * Base revision the 3-way diff was resolved against.
+     */
+    const val OFFSET_base_revision: Long = 128L
+    fun base_revision(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_base_revision, 32L)
 }
 
 /**
@@ -681,7 +857,7 @@ object lore_branch_diff_change_end_event_data_t {
  * Event data reporting a single change in a branch diff.
  */
 object lore_branch_diff_change_event_data_t {
-    const val SIZE: Long = 32L
+    const val SIZE: Long = 48L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -693,7 +869,7 @@ object lore_branch_diff_change_event_data_t {
      */
     const val OFFSET_change: Long = 0L
     fun change(struct: MemorySegment): MemorySegment =
-        struct.asSlice(OFFSET_change, 32L)
+        struct.asSlice(OFFSET_change, 48L)
 }
 
 /**
@@ -744,7 +920,7 @@ object lore_branch_diff_conflict_end_event_data_t {
  * Event data reporting a single conflict in a branch diff.
  */
 object lore_branch_diff_conflict_event_data_t {
-    const val SIZE: Long = 64L
+    const val SIZE: Long = 96L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -757,14 +933,14 @@ object lore_branch_diff_conflict_event_data_t {
      */
     const val OFFSET_source_change: Long = 0L
     fun source_change(struct: MemorySegment): MemorySegment =
-        struct.asSlice(OFFSET_source_change, 32L)
+        struct.asSlice(OFFSET_source_change, 48L)
 
     /**
      * The change on the target side of the conflict.
      */
-    const val OFFSET_target_change: Long = 32L
+    const val OFFSET_target_change: Long = 48L
     fun target_change(struct: MemorySegment): MemorySegment =
-        struct.asSlice(OFFSET_target_change, 32L)
+        struct.asSlice(OFFSET_target_change, 48L)
 }
 
 /**
@@ -793,7 +969,7 @@ object lore_branch_diff_end_event_data_t {
  * Event data describing a single changed node in a branch diff.
  */
 object lore_branch_diff_node_data_t {
-    const val SIZE: Long = 32L
+    const val SIZE: Long = 48L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -802,6 +978,7 @@ object lore_branch_diff_node_data_t {
         lore_string_t.LAYOUT.withName("path"),
         ValueLayout.JAVA_BYTE.withName("automerged"),
         MemoryLayout.paddingLayout(7),
+        lore_string_t.LAYOUT.withName("from_path"),
     ).withName("lore_branch_diff_node_data_t") as StructLayout
 
     /**
@@ -830,17 +1007,25 @@ object lore_branch_diff_node_data_t {
     fun automerged(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_automerged, value)
     }
+
+    /**
+     * Previous path of the node when it was moved or copied. Empty otherwise.
+     */
+    const val OFFSET_from_path: Long = 32L
+    fun from_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_from_path, 16L)
 }
 
 /**
  * Arguments for retrieving branch metadata (name, id, category, protection status).
  */
 object lore_branch_info_args_t {
-    const val SIZE: Long = 16L
+    const val SIZE: Long = 32L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         lore_string_t.LAYOUT.withName("branch"),
+        lore_string_t.LAYOUT.withName("link"),
     ).withName("lore_branch_info_args_t") as StructLayout
 
     /**
@@ -849,6 +1034,13 @@ object lore_branch_info_args_t {
     const val OFFSET_branch: Long = 0L
     fun branch(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_branch, 16L)
+
+    /**
+     * Optional path of a link whose repository the branch belongs to
+     */
+    const val OFFSET_link: Long = 16L
+    fun link(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_link, 16L)
 }
 
 /**
@@ -954,6 +1146,37 @@ object lore_branch_info_event_data_t {
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_archived)
     fun archived(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_archived, value)
+    }
+}
+
+/**
+ * Arguments for listing a branch's LATEST revision history.
+ */
+object lore_branch_latest_list_args_t {
+    const val SIZE: Long = 24L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_string_t.LAYOUT.withName("branch"),
+        ValueLayout.JAVA_INT.withName("limit"),
+        MemoryLayout.paddingLayout(4),
+    ).withName("lore_branch_latest_list_args_t") as StructLayout
+
+    /**
+     * Branch to list, current branch if empty
+     */
+    const val OFFSET_branch: Long = 0L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
+     * Maximum entries to return (`0` uses the default of 30)
+     */
+    const val OFFSET_limit: Long = 16L
+    fun limit(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_limit)
+    fun limit(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_limit, value)
     }
 }
 
@@ -1270,7 +1493,7 @@ object lore_branch_merge_conflict_file_event_data_t {
  * Arguments for merging the current branch's staged changes into a target branch.
  */
 object lore_branch_merge_into_args_t {
-    const val SIZE: Long = 72L
+    const val SIZE: Long = 88L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -1280,6 +1503,7 @@ object lore_branch_merge_into_args_t {
         lore_string_t.LAYOUT.withName("link"),
         ValueLayout.JAVA_BYTE.withName("ignore_links"),
         MemoryLayout.paddingLayout(7),
+        lore_string_array_t.LAYOUT.withName("inherit_metadata"),
     ).withName("lore_branch_merge_into_args_t") as StructLayout
 
     /**
@@ -1319,6 +1543,15 @@ object lore_branch_merge_into_args_t {
     fun ignore_links(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_ignore_links, value)
     }
+
+    /**
+     * Metadata keys to carry from the current branch onto the revision
+     * created on the target branch. Empty carries nothing; the single entry
+     * `*` carries every key that is not reserved to the merge itself.
+     */
+    const val OFFSET_inherit_metadata: Long = 72L
+    fun inherit_metadata(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_inherit_metadata, 16L)
 }
 
 /**
@@ -1757,7 +1990,7 @@ object lore_branch_merge_restart_args_t {
  * Arguments for merging a source branch into the current branch.
  */
 object lore_branch_merge_start_args_t {
-    const val SIZE: Long = 64L
+    const val SIZE: Long = 112L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -1768,6 +2001,9 @@ object lore_branch_merge_start_args_t {
         lore_string_t.LAYOUT.withName("link"),
         ValueLayout.JAVA_BYTE.withName("ignore_links"),
         MemoryLayout.paddingLayout(7),
+        lore_string_array_t.LAYOUT.withName("inherit_metadata"),
+        lore_string_array_t.LAYOUT.withName("link_paths"),
+        lore_string_array_t.LAYOUT.withName("link_messages"),
     ).withName("lore_branch_merge_start_args_t") as StructLayout
 
     /**
@@ -1810,6 +2046,29 @@ object lore_branch_merge_start_args_t {
     fun ignore_links(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_ignore_links, value)
     }
+
+    /**
+     * Metadata keys to carry from the source revision onto the merge
+     * revision. Empty carries nothing; the single entry `*` carries every
+     * key that is not reserved to the merge itself.
+     */
+    const val OFFSET_inherit_metadata: Long = 64L
+    fun inherit_metadata(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_inherit_metadata, 16L)
+
+    /**
+     * Array of link relative paths that have specific auto commit messages
+     */
+    const val OFFSET_link_paths: Long = 80L
+    fun link_paths(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_link_paths, 16L)
+
+    /**
+     * Array of messages corresponding to each link path (parallel array with `link_paths`)
+     */
+    const val OFFSET_link_messages: Long = 96L
+    fun link_messages(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_link_messages, 16L)
 }
 
 /**
@@ -2220,17 +2479,33 @@ object lore_branch_push_args_t {
  * Data for the event sent before a branch is created on the remote.
  */
 object lore_branch_push_branch_create_begin_event_data_t {
-    const val SIZE: Long = 32L
+    const val SIZE: Long = 64L
     const val ALIGNMENT: Long = 1L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_partition_t.LAYOUT.withName("repository"),
+        lore_context_t.LAYOUT.withName("branch"),
         lore_hash_t.LAYOUT.withName("local_revision"),
     ).withName("lore_branch_push_branch_create_begin_event_data_t") as StructLayout
 
     /**
+     * The repository the branch is created in.
+     */
+    const val OFFSET_repository: Long = 0L
+    fun repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository, 16L)
+
+    /**
+     * The branch being created.
+     */
+    const val OFFSET_branch: Long = 16L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
      * The local revision the branch starts from.
      */
-    const val OFFSET_local_revision: Long = 0L
+    const val OFFSET_local_revision: Long = 32L
     fun local_revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_local_revision, 32L)
 }
@@ -2505,25 +2780,41 @@ object lore_branch_push_fragment_progress_event_data_t {
  * Data for the event sent before a revision is pushed to the remote.
  */
 object lore_branch_push_revision_push_begin_event_data_t {
-    const val SIZE: Long = 64L
+    const val SIZE: Long = 96L
     const val ALIGNMENT: Long = 1L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_partition_t.LAYOUT.withName("repository"),
+        lore_context_t.LAYOUT.withName("branch"),
         lore_hash_t.LAYOUT.withName("remote_revision"),
         lore_hash_t.LAYOUT.withName("local_revision"),
     ).withName("lore_branch_push_revision_push_begin_event_data_t") as StructLayout
 
     /**
+     * The repository being pushed.
+     */
+    const val OFFSET_repository: Long = 0L
+    fun repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository, 16L)
+
+    /**
+     * The branch being pushed to.
+     */
+    const val OFFSET_branch: Long = 16L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
      * The latest revision of the branch on the remote.
      */
-    const val OFFSET_remote_revision: Long = 0L
+    const val OFFSET_remote_revision: Long = 32L
     fun remote_revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_remote_revision, 32L)
 
     /**
      * The local revision being pushed.
      */
-    const val OFFSET_local_revision: Long = 32L
+    const val OFFSET_local_revision: Long = 64L
     fun local_revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_local_revision, 32L)
 }
@@ -2532,10 +2823,12 @@ object lore_branch_push_revision_push_begin_event_data_t {
  * Data for the event sent after a revision is pushed to the remote.
  */
 object lore_branch_push_revision_push_end_event_data_t {
-    const val SIZE: Long = 96L
+    const val SIZE: Long = 128L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_partition_t.LAYOUT.withName("repository"),
+        lore_context_t.LAYOUT.withName("branch"),
         lore_hash_t.LAYOUT.withName("old_remote_revision"),
         lore_hash_t.LAYOUT.withName("new_remote_revision"),
         ValueLayout.JAVA_LONG.withName("new_remote_revision_number"),
@@ -2545,23 +2838,37 @@ object lore_branch_push_revision_push_end_event_data_t {
     ).withName("lore_branch_push_revision_push_end_event_data_t") as StructLayout
 
     /**
+     * The repository that was pushed.
+     */
+    const val OFFSET_repository: Long = 0L
+    fun repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository, 16L)
+
+    /**
+     * The branch that was pushed to.
+     */
+    const val OFFSET_branch: Long = 16L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
      * The branch revision on the remote before the push.
      */
-    const val OFFSET_old_remote_revision: Long = 0L
+    const val OFFSET_old_remote_revision: Long = 32L
     fun old_remote_revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_old_remote_revision, 32L)
 
     /**
      * The branch revision on the remote after the push.
      */
-    const val OFFSET_new_remote_revision: Long = 32L
+    const val OFFSET_new_remote_revision: Long = 64L
     fun new_remote_revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_new_remote_revision, 32L)
 
     /**
      * The sequential number of the new remote revision.
      */
-    const val OFFSET_new_remote_revision_number: Long = 64L
+    const val OFFSET_new_remote_revision_number: Long = 96L
     fun new_remote_revision_number(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_new_remote_revision_number)
     fun new_remote_revision_number(struct: MemorySegment, value: Long) {
@@ -2571,14 +2878,14 @@ object lore_branch_push_revision_push_end_event_data_t {
     /**
      * A message returned by the remote for the push.
      */
-    const val OFFSET_message: Long = 72L
+    const val OFFSET_message: Long = 104L
     fun message(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_message, 16L)
 
     /**
      * Set when the remote performed a fast-forward merge.
      */
-    const val OFFSET_fast_forward_merged: Long = 88L
+    const val OFFSET_fast_forward_merged: Long = 120L
     fun fast_forward_merged(struct: MemorySegment): Byte =
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_fast_forward_merged)
     fun fast_forward_merged(struct: MemorySegment, value: Byte) {
@@ -2676,6 +2983,58 @@ object lore_branch_push_revision_update_end_event_data_t {
     const val OFFSET_revision: Long = 0L
     fun revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_revision, 32L)
+}
+
+/**
+ * Data for the event reporting what a push cost.
+ * 
+ * Emitted once, when the push finishes, at statistics level one and above. A
+ * push that failed reports what it had done by then. The counts are cumulative
+ * across every revision, link and layer the push registers, where
+ * [`LoreBranchPushFragmentProgressEventData`] reports the revision in flight.
+ * 
+ * A push stores no payload of its own: a fragment the peer was asked about is
+ * deduplicated, copied or put, unless the push ended before it was reached.
+ */
+object lore_branch_push_stats_event_data_t {
+    const val SIZE: Long = 24L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("deduplicated"),
+        ValueLayout.JAVA_LONG.withName("copied"),
+        ValueLayout.JAVA_LONG.withName("put"),
+    ).withName("lore_branch_push_stats_event_data_t") as StructLayout
+
+    /**
+     * Fragments the peer already held, so nothing was registered for them.
+     */
+    const val OFFSET_deduplicated: Long = 0L
+    fun deduplicated(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_deduplicated)
+    fun deduplicated(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_deduplicated, value)
+    }
+
+    /**
+     * Fragments the peer duplicated an association for, sending no payload.
+     */
+    const val OFFSET_copied: Long = 8L
+    fun copied(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_copied)
+    fun copied(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_copied, value)
+    }
+
+    /**
+     * Fragments whose payload was uploaded.
+     */
+    const val OFFSET_put: Long = 16L
+    fun put(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_put)
+    fun put(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_put, value)
+    }
 }
 
 /**
@@ -2927,6 +3286,48 @@ object lore_branch_unprotect_event_data_t {
     const val OFFSET_name: Long = 0L
     fun name(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_name, 16L)
+}
+
+/**
+ * Borrowed writable byte slice the caller hands to the library. The counterpart of
+ * `lore_bytes_t`: the caller owns the memory and the library fills it.
+ * 
+ * A null pointer or zero length means no buffer is supplied, which is what a zero-initialized
+ * value says, as does a length no allocation can have.
+ * 
+ * The memory must stay valid, and reach nobody else, until the call it is passed to completes: a
+ * synchronous call returns, and an asynchronous one delivers `END`. The buffers supplied by the
+ * items of one call must not overlap: the items run alongside each other, so two covering the same
+ * byte would write it at once.
+ */
+object lore_bytes_mut_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("len"),
+    ).withName("lore_bytes_mut_t") as StructLayout
+
+    /**
+     * Pointer to the start of the writable slice.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of bytes available behind `ptr`.
+     */
+    const val OFFSET_len: Long = 8L
+    fun len(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_len)
+    fun len(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_len, value)
+    }
 }
 
 /**
@@ -3203,6 +3604,140 @@ object lore_cherry_pick_unresolve_revision_event_data_t {
 }
 
 /**
+ * How many files a commit wrote, split by the action each was staged with.
+ * 
+ * The actions are exclusive: a file is counted once, under the action its staged
+ * node flags name.
+ */
+object lore_commit_file_stats_data_t {
+    const val SIZE: Long = 80L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("added"),
+        ValueLayout.JAVA_LONG.withName("modified"),
+        ValueLayout.JAVA_LONG.withName("deleted"),
+        ValueLayout.JAVA_LONG.withName("moved"),
+        ValueLayout.JAVA_LONG.withName("copied"),
+        ValueLayout.JAVA_LONG.withName("directories_deleted"),
+        ValueLayout.JAVA_LONG.withName("files_read"),
+        ValueLayout.JAVA_LONG.withName("bytes_transferred"),
+        ValueLayout.JAVA_LONG.withName("files"),
+        ValueLayout.JAVA_LONG.withName("file_bytes"),
+    ).withName("lore_commit_file_stats_data_t") as StructLayout
+
+    /**
+     * Files staged as new additions.
+     */
+    const val OFFSET_added: Long = 0L
+    fun added(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_added)
+    fun added(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_added, value)
+    }
+
+    /**
+     * Files whose content or mode changed.
+     */
+    const val OFFSET_modified: Long = 8L
+    fun modified(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_modified)
+    fun modified(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_modified, value)
+    }
+
+    /**
+     * Files staged for deletion.
+     */
+    const val OFFSET_deleted: Long = 16L
+    fun deleted(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_deleted)
+    fun deleted(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_deleted, value)
+    }
+
+    /**
+     * Files staged as moves.
+     */
+    const val OFFSET_moved: Long = 24L
+    fun moved(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_moved)
+    fun moved(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_moved, value)
+    }
+
+    /**
+     * Files staged as copies.
+     */
+    const val OFFSET_copied: Long = 32L
+    fun copied(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_copied)
+    fun copied(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_copied, value)
+    }
+
+    /**
+     * Directories staged for deletion.
+     */
+    const val OFFSET_directories_deleted: Long = 40L
+    fun directories_deleted(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_directories_deleted)
+    fun directories_deleted(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_directories_deleted, value)
+    }
+
+    /**
+     * Files the commit read off disk and fragmented. A different set from
+     * `files`: a staged file whose content turns out to match the revision it is
+     * committed against is read and committed as nothing, a view-excluded path is
+     * committed from its staged node without being read, and an in-memory commit
+     * reads none at all.
+     */
+    const val OFFSET_files_read: Long = 48L
+    fun files_read(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_files_read)
+    fun files_read(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_files_read, value)
+    }
+
+    /**
+     * Uncompressed content bytes of `files_read`. The same number the progress
+     * event reports as `bytesTransferred`.
+     */
+    const val OFFSET_bytes_transferred: Long = 56L
+    fun bytes_transferred(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_bytes_transferred)
+    fun bytes_transferred(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_bytes_transferred, value)
+    }
+
+    /**
+     * Files whose content the commit wrote: `added + modified + moved + copied`.
+     */
+    const val OFFSET_files: Long = 64L
+    fun files(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_files)
+    fun files(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_files, value)
+    }
+
+    /**
+     * Uncompressed content size of exactly the `files` above, so the two are a
+     * pair. A delete contributes none.
+     * 
+     * Distinct from [`FragmentWriteCounts::data_content_bytes`], which counts
+     * fragments rather than files and excludes every fragment that needed no
+     * payload.
+     */
+    const val OFFSET_file_bytes: Long = 72L
+    fun file_bytes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_file_bytes)
+    fun file_bytes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_file_bytes, value)
+    }
+}
+
+/**
  * Data for the start of a store compaction pass.
  */
 object lore_compaction_begin_event_data_t {
@@ -3293,9 +3828,7 @@ object lore_complete_event_data_t {
 
     /**
      * The error detail for the operation. The empty default detail on
-     * success; the populated detail on failure. `#[serde(default)]` lets an
-     * older payload that lacks this field deserialize: the detail then reads
-     * back as the empty default with an empty trace list.
+     * success; the populated detail on failure.
      */
     const val OFFSET_error: Long = 8L
     fun error(struct: MemorySegment): MemorySegment =
@@ -3579,7 +4112,7 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_log_event_data_t.LAYOUT.withName("log"), MemoryLayout.paddingLayout(224)).withName("log"),
         MemoryLayout.structLayout(lore_end_event_data_t.LAYOUT.withName("end"), MemoryLayout.paddingLayout(268)).withName("end"),
         MemoryLayout.structLayout(lore_maintenance_event_data_t.LAYOUT.withName("maintenance"), MemoryLayout.paddingLayout(256)).withName("maintenance"),
-        MemoryLayout.structLayout(lore_auth_url_event_data_t.LAYOUT.withName("auth_url"), MemoryLayout.paddingLayout(256)).withName("auth_url"),
+        MemoryLayout.structLayout(lore_auth_url_event_data_t.LAYOUT.withName("auth_url"), MemoryLayout.paddingLayout(240)).withName("auth_url"),
         MemoryLayout.structLayout(lore_auth_user_info_event_data_t.LAYOUT.withName("auth_user_info"), MemoryLayout.paddingLayout(240)).withName("auth_user_info"),
         MemoryLayout.structLayout(lore_auth_user_token_event_data_t.LAYOUT.withName("auth_user_token"), MemoryLayout.paddingLayout(192)).withName("auth_user_token"),
         MemoryLayout.structLayout(lore_auth_identity_event_data_t.LAYOUT.withName("auth_identity"), MemoryLayout.paddingLayout(184)).withName("auth_identity"),
@@ -3592,12 +4125,12 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_branch_merge_abort_begin_event_data_t.LAYOUT.withName("branch_merge_abort_begin"), MemoryLayout.paddingLayout(208)).withName("branch_merge_abort_begin"),
         MemoryLayout.structLayout(lore_branch_merge_abort_end_event_data_t.LAYOUT.withName("branch_merge_abort_end"), MemoryLayout.paddingLayout(268)).withName("branch_merge_abort_end"),
         MemoryLayout.structLayout(lore_branch_info_event_data_t.LAYOUT.withName("branch_info"), MemoryLayout.paddingLayout(64)).withName("branch_info"),
-        MemoryLayout.structLayout(lore_branch_diff_begin_event_data_t.LAYOUT.withName("branch_diff_begin"), MemoryLayout.paddingLayout(268)).withName("branch_diff_begin"),
+        MemoryLayout.structLayout(lore_branch_diff_begin_event_data_t.LAYOUT.withName("branch_diff_begin"), MemoryLayout.paddingLayout(112)).withName("branch_diff_begin"),
         MemoryLayout.structLayout(lore_branch_diff_change_begin_event_data_t.LAYOUT.withName("branch_diff_change_begin"), MemoryLayout.paddingLayout(264)).withName("branch_diff_change_begin"),
-        MemoryLayout.structLayout(lore_branch_diff_change_event_data_t.LAYOUT.withName("branch_diff_change"), MemoryLayout.paddingLayout(240)).withName("branch_diff_change"),
+        MemoryLayout.structLayout(lore_branch_diff_change_event_data_t.LAYOUT.withName("branch_diff_change"), MemoryLayout.paddingLayout(224)).withName("branch_diff_change"),
         MemoryLayout.structLayout(lore_branch_diff_change_end_event_data_t.LAYOUT.withName("branch_diff_change_end"), MemoryLayout.paddingLayout(268)).withName("branch_diff_change_end"),
         MemoryLayout.structLayout(lore_branch_diff_conflict_begin_event_data_t.LAYOUT.withName("branch_diff_conflict_begin"), MemoryLayout.paddingLayout(264)).withName("branch_diff_conflict_begin"),
-        MemoryLayout.structLayout(lore_branch_diff_conflict_event_data_t.LAYOUT.withName("branch_diff_conflict"), MemoryLayout.paddingLayout(208)).withName("branch_diff_conflict"),
+        MemoryLayout.structLayout(lore_branch_diff_conflict_event_data_t.LAYOUT.withName("branch_diff_conflict"), MemoryLayout.paddingLayout(176)).withName("branch_diff_conflict"),
         MemoryLayout.structLayout(lore_branch_diff_conflict_end_event_data_t.LAYOUT.withName("branch_diff_conflict_end"), MemoryLayout.paddingLayout(268)).withName("branch_diff_conflict_end"),
         MemoryLayout.structLayout(lore_branch_diff_end_event_data_t.LAYOUT.withName("branch_diff_end"), MemoryLayout.paddingLayout(268)).withName("branch_diff_end"),
         MemoryLayout.structLayout(lore_branch_latest_list_entry_event_data_t.LAYOUT.withName("branch_latest_list_entry"), MemoryLayout.paddingLayout(224)).withName("branch_latest_list_entry"),
@@ -3643,11 +4176,11 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_branch_push_fragment_begin_event_data_t.LAYOUT.withName("branch_push_fragment_begin"), MemoryLayout.paddingLayout(256)).withName("branch_push_fragment_begin"),
         MemoryLayout.structLayout(lore_branch_push_fragment_progress_event_data_t.LAYOUT.withName("branch_push_fragment_progress"), MemoryLayout.paddingLayout(240)).withName("branch_push_fragment_progress"),
         MemoryLayout.structLayout(lore_branch_push_fragment_end_event_data_t.LAYOUT.withName("branch_push_fragment_end"), MemoryLayout.paddingLayout(256)).withName("branch_push_fragment_end"),
-        MemoryLayout.structLayout(lore_branch_push_branch_create_begin_event_data_t.LAYOUT.withName("branch_push_branch_create_begin"), MemoryLayout.paddingLayout(240)).withName("branch_push_branch_create_begin"),
+        MemoryLayout.structLayout(lore_branch_push_branch_create_begin_event_data_t.LAYOUT.withName("branch_push_branch_create_begin"), MemoryLayout.paddingLayout(208)).withName("branch_push_branch_create_begin"),
         MemoryLayout.structLayout(lore_branch_push_branch_create_end_event_data_t.LAYOUT.withName("branch_push_branch_create_end"), MemoryLayout.paddingLayout(240)).withName("branch_push_branch_create_end"),
-        MemoryLayout.structLayout(lore_branch_push_revision_push_begin_event_data_t.LAYOUT.withName("branch_push_revision_push_begin"), MemoryLayout.paddingLayout(208)).withName("branch_push_revision_push_begin"),
+        MemoryLayout.structLayout(lore_branch_push_revision_push_begin_event_data_t.LAYOUT.withName("branch_push_revision_push_begin"), MemoryLayout.paddingLayout(176)).withName("branch_push_revision_push_begin"),
         MemoryLayout.structLayout(lore_branch_push_revision_push_update_event_data_t.LAYOUT.withName("branch_push_revision_push_update"), MemoryLayout.paddingLayout(200)).withName("branch_push_revision_push_update"),
-        MemoryLayout.structLayout(lore_branch_push_revision_push_end_event_data_t.LAYOUT.withName("branch_push_revision_push_end"), MemoryLayout.paddingLayout(176)).withName("branch_push_revision_push_end"),
+        MemoryLayout.structLayout(lore_branch_push_revision_push_end_event_data_t.LAYOUT.withName("branch_push_revision_push_end"), MemoryLayout.paddingLayout(144)).withName("branch_push_revision_push_end"),
         MemoryLayout.structLayout(lore_branch_reset_event_data_t.LAYOUT.withName("branch_reset"), MemoryLayout.paddingLayout(208)).withName("branch_reset"),
         MemoryLayout.structLayout(lore_branch_switch_begin_event_data_t.LAYOUT.withName("branch_switch_begin"), MemoryLayout.paddingLayout(136)).withName("branch_switch_begin"),
         MemoryLayout.structLayout(lore_branch_switch_end_event_data_t.LAYOUT.withName("branch_switch_end"), MemoryLayout.paddingLayout(136)).withName("branch_switch_end"),
@@ -3655,7 +4188,7 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_file_info_event_data_t.LAYOUT.withName("file_info"), MemoryLayout.paddingLayout(144)).withName("file_info"),
         MemoryLayout.structLayout(lore_file_diff_event_data_t.LAYOUT.withName("file_diff"), MemoryLayout.paddingLayout(232)).withName("file_diff"),
         MemoryLayout.structLayout(lore_file_hash_event_data_t.LAYOUT.withName("file_hash"), MemoryLayout.paddingLayout(216)).withName("file_hash"),
-        MemoryLayout.structLayout(lore_file_history_event_data_t.LAYOUT.withName("file_history"), MemoryLayout.paddingLayout(72)).withName("file_history"),
+        MemoryLayout.structLayout(lore_file_history_event_data_t.LAYOUT.withName("file_history"), MemoryLayout.paddingLayout(56)).withName("file_history"),
         MemoryLayout.structLayout(lore_file_write_event_data_t.LAYOUT.withName("file_write"), MemoryLayout.paddingLayout(256)).withName("file_write"),
         MemoryLayout.structLayout(lore_file_obliterate_event_data_t.LAYOUT.withName("file_obliterate"), MemoryLayout.paddingLayout(208)).withName("file_obliterate"),
         MemoryLayout.structLayout(lore_file_dump_event_data_t.LAYOUT.withName("file_dump"), MemoryLayout.paddingLayout(200)).withName("file_dump"),
@@ -3690,8 +4223,10 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_layer_entry_event_data_t.LAYOUT.withName("layer_entry"), MemoryLayout.paddingLayout(176)).withName("layer_entry"),
         MemoryLayout.structLayout(lore_layer_remove_event_data_t.LAYOUT.withName("layer_remove"), MemoryLayout.paddingLayout(160)).withName("layer_remove"),
         MemoryLayout.structLayout(lore_layer_staged_entry_event_data_t.LAYOUT.withName("layer_staged_entry"), MemoryLayout.paddingLayout(232)).withName("layer_staged_entry"),
+        MemoryLayout.structLayout(lore_link_branch_create_event_data_t.LAYOUT.withName("link_branch_create"), MemoryLayout.paddingLayout(184)).withName("link_branch_create"),
         MemoryLayout.structLayout(lore_link_change_event_data_t.LAYOUT.withName("link_change"), MemoryLayout.paddingLayout(184)).withName("link_change"),
-        MemoryLayout.structLayout(lore_link_entry_event_data_t.LAYOUT.withName("link_entry"), MemoryLayout.paddingLayout(136)).withName("link_entry"),
+        MemoryLayout.structLayout(lore_link_entry_event_data_t.LAYOUT.withName("link_entry"), MemoryLayout.paddingLayout(152)).withName("link_entry"),
+        MemoryLayout.structLayout(lore_link_info_event_data_t.LAYOUT.withName("link_info"), MemoryLayout.paddingLayout(104)).withName("link_info"),
         MemoryLayout.structLayout(lore_lock_file_acquire_begin_event_data_t.LAYOUT.withName("lock_file_acquire_begin"), MemoryLayout.paddingLayout(256)).withName("lock_file_acquire_begin"),
         MemoryLayout.structLayout(lore_lock_file_acquire_event_data_t.LAYOUT.withName("lock_file_acquire"), MemoryLayout.paddingLayout(256)).withName("lock_file_acquire"),
         MemoryLayout.structLayout(lore_lock_file_status_begin_event_data_t.LAYOUT.withName("lock_file_status_begin"), MemoryLayout.paddingLayout(264)).withName("lock_file_status_begin"),
@@ -3710,7 +4245,7 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_dependency_resolve_begin_event_data_t.LAYOUT.withName("dependency_resolve_begin"), MemoryLayout.paddingLayout(264)).withName("dependency_resolve_begin"),
         MemoryLayout.structLayout(lore_dependency_resolve_item_event_data_t.LAYOUT.withName("dependency_resolve_item"), MemoryLayout.paddingLayout(224)).withName("dependency_resolve_item"),
         MemoryLayout.structLayout(lore_dependency_resolve_end_event_data_t.LAYOUT.withName("dependency_resolve_end"), MemoryLayout.paddingLayout(264)).withName("dependency_resolve_end"),
-        MemoryLayout.structLayout(lore_repository_data_event_data_t.LAYOUT.withName("repository_data"), MemoryLayout.paddingLayout(152)).withName("repository_data"),
+        MemoryLayout.structLayout(lore_repository_data_event_data_t.LAYOUT.withName("repository_data"), MemoryLayout.paddingLayout(136)).withName("repository_data"),
         MemoryLayout.structLayout(lore_repository_config_get_event_data_t.LAYOUT.withName("repository_config_get"), MemoryLayout.paddingLayout(240)).withName("repository_config_get"),
         MemoryLayout.structLayout(lore_repository_dump_begin_event_data_t.LAYOUT.withName("repository_dump_begin"), MemoryLayout.paddingLayout(224)).withName("repository_dump_begin"),
         MemoryLayout.structLayout(lore_repository_dump_end_event_data_t.LAYOUT.withName("repository_dump_end"), MemoryLayout.paddingLayout(268)).withName("repository_dump_end"),
@@ -3726,15 +4261,15 @@ object lore_event_t {
         lore_repository_status_revision_event_data_t.LAYOUT.withName("repository_status_revision"),
         MemoryLayout.structLayout(lore_repository_status_file_event_data_t.LAYOUT.withName("repository_status_file"), MemoryLayout.paddingLayout(216)).withName("repository_status_file"),
         MemoryLayout.structLayout(lore_repository_status_count_event_data_t.LAYOUT.withName("repository_status_count"), MemoryLayout.paddingLayout(256)).withName("repository_status_count"),
-        MemoryLayout.structLayout(lore_repository_status_summary_event_data_t.LAYOUT.withName("repository_status_summary"), MemoryLayout.paddingLayout(232)).withName("repository_status_summary"),
+        MemoryLayout.structLayout(lore_repository_status_summary_event_data_t.LAYOUT.withName("repository_status_summary"), MemoryLayout.paddingLayout(216)).withName("repository_status_summary"),
         MemoryLayout.structLayout(lore_repository_store_immutable_query_event_data_t.LAYOUT.withName("repository_store_immutable_query"), MemoryLayout.paddingLayout(192)).withName("repository_store_immutable_query"),
         MemoryLayout.structLayout(lore_revision_commit_begin_event_data_t.LAYOUT.withName("revision_commit_begin"), MemoryLayout.paddingLayout(268)).withName("revision_commit_begin"),
         MemoryLayout.structLayout(lore_revision_commit_progress_event_data_t.LAYOUT.withName("revision_commit_progress"), MemoryLayout.paddingLayout(192)).withName("revision_commit_progress"),
         MemoryLayout.structLayout(lore_revision_commit_end_event_data_t.LAYOUT.withName("revision_commit_end"), MemoryLayout.paddingLayout(192)).withName("revision_commit_end"),
         MemoryLayout.structLayout(lore_revision_commit_revision_event_data_t.LAYOUT.withName("revision_commit_revision"), MemoryLayout.paddingLayout(136)).withName("revision_commit_revision"),
         MemoryLayout.structLayout(lore_revision_info_event_data_t.LAYOUT.withName("revision_info"), MemoryLayout.paddingLayout(152)).withName("revision_info"),
-        MemoryLayout.structLayout(lore_revision_info_delta_event_data_t.LAYOUT.withName("revision_info_delta"), MemoryLayout.paddingLayout(240)).withName("revision_info_delta"),
-        MemoryLayout.structLayout(lore_revision_diff_file_event_data_t.LAYOUT.withName("revision_diff_file"), MemoryLayout.paddingLayout(152)).withName("revision_diff_file"),
+        MemoryLayout.structLayout(lore_revision_info_delta_event_data_t.LAYOUT.withName("revision_info_delta"), MemoryLayout.paddingLayout(224)).withName("revision_info_delta"),
+        MemoryLayout.structLayout(lore_revision_diff_file_event_data_t.LAYOUT.withName("revision_diff_file"), MemoryLayout.paddingLayout(136)).withName("revision_diff_file"),
         MemoryLayout.structLayout(lore_revision_find_event_data_t.LAYOUT.withName("revision_find"), MemoryLayout.paddingLayout(240)).withName("revision_find"),
         MemoryLayout.structLayout(lore_revision_history_event_data_t.LAYOUT.withName("revision_history"), MemoryLayout.paddingLayout(240)).withName("revision_history"),
         MemoryLayout.structLayout(lore_revision_history_entry_event_data_t.LAYOUT.withName("revision_history_entry"), MemoryLayout.paddingLayout(168)).withName("revision_history_entry"),
@@ -3747,7 +4282,7 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_revision_restore_revision_event_data_t.LAYOUT.withName("revision_restore_revision"), MemoryLayout.paddingLayout(232)).withName("revision_restore_revision"),
         MemoryLayout.structLayout(lore_revision_restore_sync_begin_event_data_t.LAYOUT.withName("revision_restore_sync_begin"), MemoryLayout.paddingLayout(264)).withName("revision_restore_sync_begin"),
         MemoryLayout.structLayout(lore_revision_restore_sync_end_event_data_t.LAYOUT.withName("revision_restore_sync_end"), MemoryLayout.paddingLayout(264)).withName("revision_restore_sync_end"),
-        MemoryLayout.structLayout(lore_revision_resolve_event_data_t.LAYOUT.withName("revision_resolve"), MemoryLayout.paddingLayout(208)).withName("revision_resolve"),
+        MemoryLayout.structLayout(lore_revision_resolve_event_data_t.LAYOUT.withName("revision_resolve"), MemoryLayout.paddingLayout(184)).withName("revision_resolve"),
         MemoryLayout.structLayout(lore_revision_sync_target_event_data_t.LAYOUT.withName("revision_sync_target"), MemoryLayout.paddingLayout(120)).withName("revision_sync_target"),
         MemoryLayout.structLayout(lore_revision_sync_file_event_data_t.LAYOUT.withName("revision_sync_file"), MemoryLayout.paddingLayout(240)).withName("revision_sync_file"),
         MemoryLayout.structLayout(lore_revision_sync_progress_event_data_t.LAYOUT.withName("revision_sync_progress"), MemoryLayout.paddingLayout(200)).withName("revision_sync_progress"),
@@ -3762,23 +4297,24 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_notification_unsubscribed_event_data_t.LAYOUT.withName("notification_unsubscribed"), MemoryLayout.paddingLayout(256)).withName("notification_unsubscribed"),
         MemoryLayout.structLayout(lore_shared_store_create_event_data_t.LAYOUT.withName("shared_store_create"), MemoryLayout.paddingLayout(256)).withName("shared_store_create"),
         MemoryLayout.structLayout(lore_shared_store_info_event_data_t.LAYOUT.withName("shared_store_info"), MemoryLayout.paddingLayout(216)).withName("shared_store_info"),
+        MemoryLayout.structLayout(lore_shared_store_list_event_data_t.LAYOUT.withName("shared_store_list"), MemoryLayout.paddingLayout(256)).withName("shared_store_list"),
         MemoryLayout.structLayout(lore_link_staged_entry_event_data_t.LAYOUT.withName("link_staged_entry"), MemoryLayout.paddingLayout(232)).withName("link_staged_entry"),
         MemoryLayout.structLayout(lore_storage_opened_event_data_t.LAYOUT.withName("storage_opened"), MemoryLayout.paddingLayout(264)).withName("storage_opened"),
-        MemoryLayout.structLayout(lore_storage_put_item_complete_event_data_t.LAYOUT.withName("storage_put_item_complete"), MemoryLayout.paddingLayout(208)).withName("storage_put_item_complete"),
+        MemoryLayout.structLayout(lore_storage_put_item_complete_event_data_t.LAYOUT.withName("storage_put_item_complete"), MemoryLayout.paddingLayout(168)).withName("storage_put_item_complete"),
         MemoryLayout.structLayout(lore_storage_get_header_event_data_t.LAYOUT.withName("storage_get_header"), MemoryLayout.paddingLayout(208)).withName("storage_get_header"),
         MemoryLayout.structLayout(lore_storage_get_data_event_data_t.LAYOUT.withName("storage_get_data"), MemoryLayout.paddingLayout(192)).withName("storage_get_data"),
-        MemoryLayout.structLayout(lore_storage_get_item_complete_event_data_t.LAYOUT.withName("storage_get_item_complete"), MemoryLayout.paddingLayout(208)).withName("storage_get_item_complete"),
-        MemoryLayout.structLayout(lore_storage_get_metadata_item_complete_event_data_t.LAYOUT.withName("storage_get_metadata_item_complete"), MemoryLayout.paddingLayout(192)).withName("storage_get_metadata_item_complete"),
-        MemoryLayout.structLayout(lore_storage_copy_item_complete_event_data_t.LAYOUT.withName("storage_copy_item_complete"), MemoryLayout.paddingLayout(160)).withName("storage_copy_item_complete"),
-        MemoryLayout.structLayout(lore_storage_obliterate_item_complete_event_data_t.LAYOUT.withName("storage_obliterate_item_complete"), MemoryLayout.paddingLayout(208)).withName("storage_obliterate_item_complete"),
-        MemoryLayout.structLayout(lore_storage_upload_item_complete_event_data_t.LAYOUT.withName("storage_upload_item_complete"), MemoryLayout.paddingLayout(208)).withName("storage_upload_item_complete"),
+        MemoryLayout.structLayout(lore_storage_get_item_complete_event_data_t.LAYOUT.withName("storage_get_item_complete"), MemoryLayout.paddingLayout(176)).withName("storage_get_item_complete"),
+        MemoryLayout.structLayout(lore_storage_get_metadata_item_complete_event_data_t.LAYOUT.withName("storage_get_metadata_item_complete"), MemoryLayout.paddingLayout(160)).withName("storage_get_metadata_item_complete"),
+        MemoryLayout.structLayout(lore_storage_copy_item_complete_event_data_t.LAYOUT.withName("storage_copy_item_complete"), MemoryLayout.paddingLayout(128)).withName("storage_copy_item_complete"),
+        MemoryLayout.structLayout(lore_storage_obliterate_item_complete_event_data_t.LAYOUT.withName("storage_obliterate_item_complete"), MemoryLayout.paddingLayout(168)).withName("storage_obliterate_item_complete"),
+        MemoryLayout.structLayout(lore_storage_upload_item_complete_event_data_t.LAYOUT.withName("storage_upload_item_complete"), MemoryLayout.paddingLayout(168)).withName("storage_upload_item_complete"),
         MemoryLayout.structLayout(lore_revision_tree_loaded_event_data_t.LAYOUT.withName("revision_tree_loaded"), MemoryLayout.paddingLayout(264)).withName("revision_tree_loaded"),
         MemoryLayout.structLayout(lore_revision_tree_resolve_path_complete_event_data_t.LAYOUT.withName("revision_tree_resolve_path_complete"), MemoryLayout.paddingLayout(208)).withName("revision_tree_resolve_path_complete"),
         MemoryLayout.structLayout(lore_revision_tree_child_event_data_t.LAYOUT.withName("revision_tree_child"), MemoryLayout.paddingLayout(160)).withName("revision_tree_child"),
         MemoryLayout.structLayout(lore_revision_tree_node_info_event_data_t.LAYOUT.withName("revision_tree_node_info"), MemoryLayout.paddingLayout(96)).withName("revision_tree_node_info"),
         MemoryLayout.structLayout(lore_revision_tree_node_path_event_data_t.LAYOUT.withName("revision_tree_node_path"), MemoryLayout.paddingLayout(192)).withName("revision_tree_node_path"),
         MemoryLayout.structLayout(lore_revision_tree_add_complete_event_data_t.LAYOUT.withName("revision_tree_add_complete"), MemoryLayout.paddingLayout(256)).withName("revision_tree_add_complete"),
-        MemoryLayout.structLayout(lore_revision_tree_delete_complete_event_data_t.LAYOUT.withName("revision_tree_delete_complete"), MemoryLayout.paddingLayout(256)).withName("revision_tree_delete_complete"),
+        MemoryLayout.structLayout(lore_revision_tree_delete_complete_event_data_t.LAYOUT.withName("revision_tree_delete_complete"), MemoryLayout.paddingLayout(248)).withName("revision_tree_delete_complete"),
         MemoryLayout.structLayout(lore_revision_tree_modify_complete_event_data_t.LAYOUT.withName("revision_tree_modify_complete"), MemoryLayout.paddingLayout(256)).withName("revision_tree_modify_complete"),
         MemoryLayout.structLayout(lore_revision_tree_move_complete_event_data_t.LAYOUT.withName("revision_tree_move_complete"), MemoryLayout.paddingLayout(256)).withName("revision_tree_move_complete"),
         MemoryLayout.structLayout(lore_revision_tree_metadata_set_complete_event_data_t.LAYOUT.withName("revision_tree_metadata_set_complete"), MemoryLayout.paddingLayout(256)).withName("revision_tree_metadata_set_complete"),
@@ -3787,11 +4323,11 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_revision_tree_close_complete_event_data_t.LAYOUT.withName("revision_tree_close_complete"), MemoryLayout.paddingLayout(256)).withName("revision_tree_close_complete"),
         MemoryLayout.structLayout(lore_revision_tree_list_children_begin_event_data_t.LAYOUT.withName("revision_tree_list_children_begin"), MemoryLayout.paddingLayout(208)).withName("revision_tree_list_children_begin"),
         MemoryLayout.structLayout(lore_revision_tree_info_event_data_t.LAYOUT.withName("revision_tree_info"), MemoryLayout.paddingLayout(120)).withName("revision_tree_info"),
-        MemoryLayout.structLayout(lore_storage_mutable_load_item_complete_event_data_t.LAYOUT.withName("storage_mutable_load_item_complete"), MemoryLayout.paddingLayout(224)).withName("storage_mutable_load_item_complete"),
-        MemoryLayout.structLayout(lore_storage_mutable_store_item_complete_event_data_t.LAYOUT.withName("storage_mutable_store_item_complete"), MemoryLayout.paddingLayout(256)).withName("storage_mutable_store_item_complete"),
-        MemoryLayout.structLayout(lore_storage_mutable_compare_and_swap_item_complete_event_data_t.LAYOUT.withName("storage_mutable_compare_and_swap_item_complete"), MemoryLayout.paddingLayout(224)).withName("storage_mutable_compare_and_swap_item_complete"),
+        MemoryLayout.structLayout(lore_storage_mutable_load_item_complete_event_data_t.LAYOUT.withName("storage_mutable_load_item_complete"), MemoryLayout.paddingLayout(192)).withName("storage_mutable_load_item_complete"),
+        MemoryLayout.structLayout(lore_storage_mutable_store_item_complete_event_data_t.LAYOUT.withName("storage_mutable_store_item_complete"), MemoryLayout.paddingLayout(224)).withName("storage_mutable_store_item_complete"),
+        MemoryLayout.structLayout(lore_storage_mutable_compare_and_swap_item_complete_event_data_t.LAYOUT.withName("storage_mutable_compare_and_swap_item_complete"), MemoryLayout.paddingLayout(192)).withName("storage_mutable_compare_and_swap_item_complete"),
         MemoryLayout.structLayout(lore_storage_mutable_list_entry_event_data_t.LAYOUT.withName("storage_mutable_list_entry"), MemoryLayout.paddingLayout(200)).withName("storage_mutable_list_entry"),
-        MemoryLayout.structLayout(lore_storage_mutable_list_item_complete_event_data_t.LAYOUT.withName("storage_mutable_list_item_complete"), MemoryLayout.paddingLayout(256)).withName("storage_mutable_list_item_complete"),
+        MemoryLayout.structLayout(lore_storage_mutable_list_item_complete_event_data_t.LAYOUT.withName("storage_mutable_list_item_complete"), MemoryLayout.paddingLayout(224)).withName("storage_mutable_list_item_complete"),
         MemoryLayout.structLayout(lore_eviction_begin_event_data_t.LAYOUT.withName("eviction_begin"), MemoryLayout.paddingLayout(264)).withName("eviction_begin"),
         MemoryLayout.structLayout(lore_eviction_progress_event_data_t.LAYOUT.withName("eviction_progress"), MemoryLayout.paddingLayout(264)).withName("eviction_progress"),
         MemoryLayout.structLayout(lore_eviction_end_event_data_t.LAYOUT.withName("eviction_end"), MemoryLayout.paddingLayout(264)).withName("eviction_end"),
@@ -3799,6 +4335,14 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_compaction_progress_event_data_t.LAYOUT.withName("compaction_progress"), MemoryLayout.paddingLayout(264)).withName("compaction_progress"),
         MemoryLayout.structLayout(lore_compaction_end_event_data_t.LAYOUT.withName("compaction_end"), MemoryLayout.paddingLayout(264)).withName("compaction_end"),
         MemoryLayout.structLayout(lore_revision_tree_batch_complete_event_data_t.LAYOUT.withName("revision_tree_batch_complete"), MemoryLayout.paddingLayout(256)).withName("revision_tree_batch_complete"),
+        MemoryLayout.structLayout(lore_revision_tree_metadata_clear_complete_event_data_t.LAYOUT.withName("revision_tree_metadata_clear_complete"), MemoryLayout.paddingLayout(256)).withName("revision_tree_metadata_clear_complete"),
+        lore_revision_commit_stats_event_data_t.LAYOUT.withName("revision_commit_stats"),
+        MemoryLayout.structLayout(lore_branch_push_stats_event_data_t.LAYOUT.withName("branch_push_stats"), MemoryLayout.paddingLayout(248)).withName("branch_push_stats"),
+        MemoryLayout.structLayout(lore_service_status_event_data_t.LAYOUT.withName("service_status"), MemoryLayout.paddingLayout(232)).withName("service_status"),
+        MemoryLayout.structLayout(lore_service_message_event_data_t.LAYOUT.withName("service_message"), MemoryLayout.paddingLayout(248)).withName("service_message"),
+        MemoryLayout.structLayout(lore_auth_pending_event_data_t.LAYOUT.withName("auth_pending"), MemoryLayout.paddingLayout(248)).withName("auth_pending"),
+        MemoryLayout.structLayout(lore_storage_get_fragment_event_data_t.LAYOUT.withName("storage_get_fragment"), MemoryLayout.paddingLayout(176)).withName("storage_get_fragment"),
+        MemoryLayout.structLayout(lore_file_audit_event_data_t.LAYOUT.withName("file_audit"), MemoryLayout.paddingLayout(212)).withName("file_audit"),
     ).withName("union"),
     ).withName("lore_event_t") as StructLayout
 
@@ -3877,6 +4421,152 @@ object lore_eviction_progress_event_data_t {
         struct.get(ValueLayout.JAVA_LONG, OFFSET_evicted)
     fun evicted(struct: MemorySegment, value: Long) {
         struct.set(ValueLayout.JAVA_LONG, OFFSET_evicted, value)
+    }
+}
+
+/**
+ * Arguments for attributing the lines of a file to the revisions that last changed them.
+ */
+object lore_file_audit_args_t {
+    const val SIZE: Long = 40L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_string_t.LAYOUT.withName("path"),
+        lore_string_t.LAYOUT.withName("revision"),
+        ValueLayout.JAVA_INT.withName("max_revisions"),
+        ValueLayout.JAVA_BYTE.withName("no_ignore_space_at_eol"),
+        ValueLayout.JAVA_BYTE.withName("ignore_space_change"),
+        MemoryLayout.paddingLayout(2),
+    ).withName("lore_file_audit_args_t") as StructLayout
+
+    /**
+     * A path to a file
+     */
+    const val OFFSET_path: Long = 0L
+    fun path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_path, 16L)
+
+    /**
+     * Revision to read the file at, in any form a revision specifier takes: a
+     * whole hash signature, `[branch]@<number>`, `[branch]@LATEST` or
+     * `<branch>@<hash>`, optionally followed by `~<count>` to step back that many
+     * parents. Empty reads the revision the instance is synced to and accounts for
+     * the file on disk
+     */
+    const val OFFSET_revision: Long = 16L
+    fun revision(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_revision, 16L)
+
+    /**
+     * Revisions of the file's predecessor chain to walk, `0` for the default of
+     * 100 and `UINT32_MAX` for the whole chain. Zero means the default rather
+     * than no limit, as `lore_file_history_args_t::length` does, so a
+     * zero-initialized value is bounded
+     */
+    const val OFFSET_max_revisions: Long = 32L
+    fun max_revisions(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_max_revisions)
+    fun max_revisions(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_max_revisions, value)
+    }
+
+    /**
+     * Count a line that differs only in trailing whitespace as changed.
+     * Trailing whitespace is ignored by default, so the field is stated as the
+     * refusal and a zero-initialized value carries the default
+     */
+    const val OFFSET_no_ignore_space_at_eol: Long = 36L
+    fun no_ignore_space_at_eol(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_no_ignore_space_at_eol)
+    fun no_ignore_space_at_eol(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_no_ignore_space_at_eol, value)
+    }
+
+    /**
+     * Collapse runs of internal whitespace to a single space before comparing,
+     * which leaves a reindented line with the revision that wrote its text
+     */
+    const val OFFSET_ignore_space_change: Long = 37L
+    fun ignore_space_change(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_ignore_space_change)
+    fun ignore_space_change(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_ignore_space_change, value)
+    }
+}
+
+/**
+ * Data for the event carrying one range of lines in a file.
+ * 
+ * A range names the revision that last changed it and nothing more of that
+ * revision: a caller reads the revision's metadata itself, once per distinct
+ * revision. It carries no revision number, because numbers are per-branch and
+ * reporting one would make the answer depend on the caller's branch.
+ * 
+ * Each range is sent as soon as the step of the walk that resolves it ends, so
+ * ranges arrive most recently changed first rather than in line order. Each
+ * range is complete and never needs joining with another. A walk that ends
+ * with an error still reports every line: the lines it resolved keep their outcomes, and the lines
+ * it did not reach are reported as `LORE_FILE_AUDIT_OUTCOME_UNRESOLVED`. An
+ * audit that fails before the walk starts reports no range. Read the
+ * completion status before treating the ranges received as the whole answer.
+ */
+object lore_file_audit_event_data_t {
+    const val SIZE: Long = 60L
+    const val ALIGNMENT: Long = 4L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_partition_t.LAYOUT.withName("repository"),
+        lore_hash_t.LAYOUT.withName("revision"),
+        ValueLayout.JAVA_INT.withName("line_first"),
+        ValueLayout.JAVA_INT.withName("line_last"),
+        ValueLayout.JAVA_INT.withName("outcome"),
+    ).withName("lore_file_audit_event_data_t") as StructLayout
+
+    /**
+     * Identifier of the repository the range came from. A walk that follows
+     * the file into a linked repository reports that repository.
+     */
+    const val OFFSET_repository: Long = 0L
+    fun repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository, 16L)
+
+    /**
+     * Revision that last changed the range. Zero unless `outcome` is
+     * `Attributed`.
+     */
+    const val OFFSET_revision: Long = 16L
+    fun revision(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_revision, 32L)
+
+    /**
+     * First line of the range, 1-based.
+     */
+    const val OFFSET_line_first: Long = 48L
+    fun line_first(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_line_first)
+    fun line_first(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_line_first, value)
+    }
+
+    /**
+     * Last line of the range, 1-based and inclusive.
+     */
+    const val OFFSET_line_last: Long = 52L
+    fun line_last(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_line_last)
+    fun line_last(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_line_last, value)
+    }
+
+    /**
+     * What the range resolved to, or why it did not resolve.
+     */
+    const val OFFSET_outcome: Long = 56L
+    fun outcome(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_outcome)
+    fun outcome(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_outcome, value)
     }
 }
 
@@ -4778,7 +5468,7 @@ object lore_file_history_args_t {
  * Data for the event describing one entry in a file's history.
  */
 object lore_file_history_event_data_t {
-    const val SIZE: Long = 200L
+    const val SIZE: Long = 216L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -4791,6 +5481,7 @@ object lore_file_history_event_data_t {
         ValueLayout.JAVA_LONG.withName("size"),
         ValueLayout.JAVA_INT.withName("action"),
         MemoryLayout.paddingLayout(4),
+        lore_string_t.LAYOUT.withName("from_path"),
     ).withName("lore_file_history_event_data_t") as StructLayout
 
     /**
@@ -4857,6 +5548,13 @@ object lore_file_history_event_data_t {
     fun action(struct: MemorySegment, value: Int) {
         struct.set(ValueLayout.JAVA_INT, OFFSET_action, value)
     }
+
+    /**
+     * Path the file was moved from at this revision. Empty otherwise.
+     */
+    const val OFFSET_from_path: Long = 200L
+    fun from_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_from_path, 16L)
 }
 
 /**
@@ -5045,7 +5743,7 @@ object lore_file_info_event_data_t {
     }
 
     /**
-     * Content hash of the entry on the local filesystem.
+     * Address the entry's local content hashes to, zero where nothing was compared.
      */
     const val OFFSET_local_hash: Long = 88L
     fun local_hash(struct: MemorySegment): MemorySegment =
@@ -5466,7 +6164,8 @@ object lore_file_reset_to_last_merged_args_t {
         lore_string_array_t.LAYOUT.withName("paths"),
         lore_string_t.LAYOUT.withName("branch"),
         ValueLayout.JAVA_BYTE.withName("purge"),
-        MemoryLayout.paddingLayout(7),
+        MemoryLayout.paddingLayout(3),
+        ValueLayout.JAVA_INT.withName("merge_side"),
     ).withName("lore_file_reset_to_last_merged_args_t") as StructLayout
 
     /**
@@ -5491,6 +6190,16 @@ object lore_file_reset_to_last_merged_args_t {
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_purge)
     fun purge(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_purge, value)
+    }
+
+    /**
+     * Merge side to restore, 0 = resolved (the merge revision), 1 = self ("mine"), 2 = other ("theirs")
+     */
+    const val OFFSET_merge_side: Long = 36L
+    fun merge_side(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_merge_side)
+    fun merge_side(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_merge_side, value)
     }
 }
 
@@ -5702,14 +6411,14 @@ object lore_file_stage_file_event_data_t {
     ).withName("lore_file_stage_file_event_data_t") as StructLayout
 
     /**
-     * Previous path of the file, when it was moved.
+     * Previous path of the file, when it was moved, relative to the root of the working tree.
      */
     const val OFFSET_from_path: Long = 0L
     fun from_path(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_from_path, 16L)
 
     /**
-     * Path of the file.
+     * Path of the file, relative to the root of the working tree.
      */
     const val OFFSET_path: Long = 16L
     fun path(struct: MemorySegment): MemorySegment =
@@ -5958,7 +6667,7 @@ object lore_file_unstage_file_event_data_t {
     ).withName("lore_file_unstage_file_event_data_t") as StructLayout
 
     /**
-     * Path of the file.
+     * Path of the file, relative to the root of the working tree.
      */
     const val OFFSET_path: Long = 0L
     fun path(struct: MemorySegment): MemorySegment =
@@ -6115,6 +6824,312 @@ object lore_filter_exclude_event_data_t {
 }
 
 /**
+ * A snapshot of [`FragmentWriteStats`], as plain numbers, and the payload an
+ * operation reports them in.
+ * 
+ * Only the `data_*` and `fragmentlist_*` fields split by what a payload is. Every
+ * other count covers a fragment whatever its payload, content or a fragment list.
+ * The content totals take a fragment list as zero, its `size_content` being the
+ * content of its leaves.
+ * 
+ * For a drained operation, unless a fragment failed part-way through the
+ * pipeline:
+ * 
+ * - `fragments_produced == fragments_deduplicated + fragments_processed`.
+ * - `fragment_content_bytes == deduplicated_content_bytes + processed_content_bytes`.
+ * - `local_writes == local_metadata_writes + local_payload_writes`.
+ * - `remote_writes == remote_copy_writes + remote_put_writes`.
+ * - `remote_writes`, `remote_already_durable`, `local_only_writes` and
+ * `remote_upload_failed` sum to `fragments_processed`: every processed
+ * fragment reaches exactly one of those outcomes.
+ * - `data_fragments + fragmentlists + no_payload_fragments == fragments_processed`.
+ * - `data_content_bytes + no_payload_content_bytes == processed_content_bytes`.
+ */
+object lore_fragment_stats_data_t {
+    const val SIZE: Long = 192L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("fragments_produced"),
+        ValueLayout.JAVA_LONG.withName("fragment_content_bytes"),
+        ValueLayout.JAVA_LONG.withName("fragments_deduplicated"),
+        ValueLayout.JAVA_LONG.withName("deduplicated_content_bytes"),
+        ValueLayout.JAVA_LONG.withName("fragments_processed"),
+        ValueLayout.JAVA_LONG.withName("processed_content_bytes"),
+        ValueLayout.JAVA_LONG.withName("data_fragments"),
+        ValueLayout.JAVA_LONG.withName("data_payload_bytes"),
+        ValueLayout.JAVA_LONG.withName("data_content_bytes"),
+        ValueLayout.JAVA_LONG.withName("fragmentlists"),
+        ValueLayout.JAVA_LONG.withName("fragmentlist_payload_bytes"),
+        ValueLayout.JAVA_LONG.withName("no_payload_fragments"),
+        ValueLayout.JAVA_LONG.withName("no_payload_content_bytes"),
+        ValueLayout.JAVA_LONG.withName("local_writes"),
+        ValueLayout.JAVA_LONG.withName("local_metadata_writes"),
+        ValueLayout.JAVA_LONG.withName("local_payload_writes"),
+        ValueLayout.JAVA_LONG.withName("local_payload_bytes"),
+        ValueLayout.JAVA_LONG.withName("remote_writes"),
+        ValueLayout.JAVA_LONG.withName("remote_copy_writes"),
+        ValueLayout.JAVA_LONG.withName("remote_put_writes"),
+        ValueLayout.JAVA_LONG.withName("remote_put_bytes"),
+        ValueLayout.JAVA_LONG.withName("remote_already_durable"),
+        ValueLayout.JAVA_LONG.withName("local_only_writes"),
+        ValueLayout.JAVA_LONG.withName("remote_upload_failed"),
+    ).withName("lore_fragment_stats_data_t") as StructLayout
+
+    /**
+     * Fragments handed to the store, whatever came of them.
+     */
+    const val OFFSET_fragments_produced: Long = 0L
+    fun fragments_produced(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_fragments_produced)
+    fun fragments_produced(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_fragments_produced, value)
+    }
+
+    /**
+     * Uncompressed content bytes the produced fragments stand for.
+     */
+    const val OFFSET_fragment_content_bytes: Long = 8L
+    fun fragment_content_bytes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_fragment_content_bytes)
+    fun fragment_content_bytes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_fragment_content_bytes, value)
+    }
+
+    /**
+     * Fragments the stores already held in the form the write wanted, so no
+     * payload was loaded, compressed or uploaded for them.
+     */
+    const val OFFSET_fragments_deduplicated: Long = 16L
+    fun fragments_deduplicated(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_fragments_deduplicated)
+    fun fragments_deduplicated(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_fragments_deduplicated, value)
+    }
+
+    /**
+     * Content bytes of `fragments_deduplicated`.
+     */
+    const val OFFSET_deduplicated_content_bytes: Long = 24L
+    fun deduplicated_content_bytes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_deduplicated_content_bytes)
+    fun deduplicated_content_bytes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_deduplicated_content_bytes, value)
+    }
+
+    /**
+     * Fragments that entered the write pipeline.
+     */
+    const val OFFSET_fragments_processed: Long = 32L
+    fun fragments_processed(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_fragments_processed)
+    fun fragments_processed(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_fragments_processed, value)
+    }
+
+    /**
+     * Content bytes of `fragments_processed`.
+     */
+    const val OFFSET_processed_content_bytes: Long = 40L
+    fun processed_content_bytes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_processed_content_bytes)
+    fun processed_content_bytes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_processed_content_bytes, value)
+    }
+
+    /**
+     * Of `fragments_processed`, those that produced a stored payload of content.
+     */
+    const val OFFSET_data_fragments: Long = 48L
+    fun data_fragments(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_data_fragments)
+    fun data_fragments(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_data_fragments, value)
+    }
+
+    /**
+     * Stored payload bytes of `data_fragments`, after compression where the
+     * pipeline compressed them.
+     */
+    const val OFFSET_data_payload_bytes: Long = 56L
+    fun data_payload_bytes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_data_payload_bytes)
+    fun data_payload_bytes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_data_payload_bytes, value)
+    }
+
+    /**
+     * Uncompressed content bytes `data_fragments` stand for. Compare against
+     * `data_payload_bytes` for the compression ratio.
+     */
+    const val OFFSET_data_content_bytes: Long = 64L
+    fun data_content_bytes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_data_content_bytes)
+    fun data_content_bytes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_data_content_bytes, value)
+    }
+
+    /**
+     * Of `fragments_processed`, those that produced a stored fragment list.
+     */
+    const val OFFSET_fragmentlists: Long = 72L
+    fun fragmentlists(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_fragmentlists)
+    fun fragmentlists(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_fragmentlists, value)
+    }
+
+    /**
+     * Stored payload bytes of `fragmentlists`.
+     */
+    const val OFFSET_fragmentlist_payload_bytes: Long = 80L
+    fun fragmentlist_payload_bytes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_fragmentlist_payload_bytes)
+    fun fragmentlist_payload_bytes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_fragmentlist_payload_bytes, value)
+    }
+
+    /**
+     * Of `fragments_processed`, those that needed no payload, so none was
+     * prepared: the remote duplicated an association for them and the write did
+     * not ask for the payload to be cached locally.
+     */
+    const val OFFSET_no_payload_fragments: Long = 88L
+    fun no_payload_fragments(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_no_payload_fragments)
+    fun no_payload_fragments(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_no_payload_fragments, value)
+    }
+
+    /**
+     * Content bytes `no_payload_fragments` stand for.
+     */
+    const val OFFSET_no_payload_content_bytes: Long = 96L
+    fun no_payload_content_bytes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_no_payload_content_bytes)
+    fun no_payload_content_bytes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_no_payload_content_bytes, value)
+    }
+
+    /**
+     * Terminal entries written to the local store.
+     */
+    const val OFFSET_local_writes: Long = 104L
+    fun local_writes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_local_writes)
+    fun local_writes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_local_writes, value)
+    }
+
+    /**
+     * Of `local_writes`, those that recorded only the fragment header — the
+     * payload lives on the remote and was not cached here.
+     */
+    const val OFFSET_local_metadata_writes: Long = 112L
+    fun local_metadata_writes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_local_metadata_writes)
+    fun local_metadata_writes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_local_metadata_writes, value)
+    }
+
+    /**
+     * Of `local_writes`, those that also wrote a payload.
+     */
+    const val OFFSET_local_payload_writes: Long = 120L
+    fun local_payload_writes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_local_payload_writes)
+    fun local_payload_writes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_local_payload_writes, value)
+    }
+
+    /**
+     * Payload bytes written by `local_payload_writes`.
+     */
+    const val OFFSET_local_payload_bytes: Long = 128L
+    fun local_payload_bytes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_local_payload_bytes)
+    fun local_payload_bytes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_local_payload_bytes, value)
+    }
+
+    /**
+     * Fragments registered with the remote.
+     */
+    const val OFFSET_remote_writes: Long = 136L
+    fun remote_writes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_remote_writes)
+    fun remote_writes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_remote_writes, value)
+    }
+
+    /**
+     * Of `remote_writes`, those the remote duplicated from an association it
+     * already held, so no payload crossed the wire.
+     */
+    const val OFFSET_remote_copy_writes: Long = 144L
+    fun remote_copy_writes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_remote_copy_writes)
+    fun remote_copy_writes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_remote_copy_writes, value)
+    }
+
+    /**
+     * Of `remote_writes`, those whose payload was uploaded.
+     */
+    const val OFFSET_remote_put_writes: Long = 152L
+    fun remote_put_writes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_remote_put_writes)
+    fun remote_put_writes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_remote_put_writes, value)
+    }
+
+    /**
+     * Payload bytes uploaded by `remote_put_writes`.
+     */
+    const val OFFSET_remote_put_bytes: Long = 160L
+    fun remote_put_bytes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_remote_put_bytes)
+    fun remote_put_bytes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_remote_put_bytes, value)
+    }
+
+    /**
+     * Fragments the remote already held under this very address, so they took
+     * neither a copy nor an upload.
+     */
+    const val OFFSET_remote_already_durable: Long = 168L
+    fun remote_already_durable(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_remote_already_durable)
+    fun remote_already_durable(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_remote_already_durable, value)
+    }
+
+    /**
+     * Fragments written with no remote consulted, a local-only write having been
+     * asked for. Branch latest history is one such write, which the server does
+     * not store, so a commit against a remote has exactly one.
+     */
+    const val OFFSET_local_only_writes: Long = 176L
+    fun local_only_writes(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_local_only_writes)
+    fun local_only_writes(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_local_only_writes, value)
+    }
+
+    /**
+     * Fragments whose upload did not land, leaving them stored only locally for
+     * a later push to offer again. Their payloads are counted under
+     * `local_payload_writes` too, indistinguishably from those kept by request.
+     */
+    const val OFFSET_remote_upload_failed: Long = 184L
+    fun remote_upload_failed(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_remote_upload_failed)
+    fun remote_upload_failed(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_remote_upload_failed, value)
+    }
+}
+
+/**
  * Header describing a stored piece of content.
  * 
  * Records how the payload is stored and how large it is, both as held in
@@ -6194,9 +7209,14 @@ object lore_fragment_write_event_data_t {
 
 /**
  * Common options shared by repository operations.
+ * 
+ * Zero every byte of it, padding included, before setting the fields a call
+ * uses, as every structure passed to the library: a field left zero selects
+ * its default, and a field a release adds in its padding is left unset by
+ * code built against an earlier header.
  */
 object lore_global_args_t {
-    const val SIZE: Long = 136L
+    const val SIZE: Long = 192L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -6209,8 +7229,7 @@ object lore_global_args_t {
         ValueLayout.JAVA_BYTE.withName("local"),
         ValueLayout.JAVA_BYTE.withName("remote"),
         ValueLayout.JAVA_BYTE.withName("dry_run"),
-        ValueLayout.JAVA_BYTE.withName("no_atime"),
-        MemoryLayout.paddingLayout(2),
+        MemoryLayout.paddingLayout(3),
         ValueLayout.JAVA_INT.withName("max_connections"),
         ValueLayout.JAVA_INT.withName("search_limit"),
         ValueLayout.JAVA_BYTE.withName("search_nearest"),
@@ -6226,6 +7245,14 @@ object lore_global_args_t {
         ValueLayout.JAVA_BYTE.withName("sync_data"),
         ValueLayout.JAVA_BYTE.withName("cache"),
         MemoryLayout.paddingLayout(6),
+        lore_string_t.LAYOUT.withName("identity_token"),
+        lore_string_t.LAYOUT.withName("access_token"),
+        ValueLayout.JAVA_INT.withName("stats"),
+        MemoryLayout.paddingLayout(4),
+        ValueLayout.JAVA_LONG.withName("event_interval_ms"),
+        ValueLayout.JAVA_INT.withName("auth_mode"),
+        ValueLayout.JAVA_BYTE.withName("trust_remote"),
+        MemoryLayout.paddingLayout(3),
     ).withName("lore_global_args_t") as StructLayout
 
     /**
@@ -6311,17 +7338,8 @@ object lore_global_args_t {
     }
 
     /**
-     * Avoid recording last access timestamps in the data stores
-     */
-    const val OFFSET_no_atime: Long = 69L
-    fun no_atime(struct: MemorySegment): Byte =
-        struct.get(ValueLayout.JAVA_BYTE, OFFSET_no_atime)
-    fun no_atime(struct: MemorySegment, value: Byte) {
-        struct.set(ValueLayout.JAVA_BYTE, OFFSET_no_atime, value)
-    }
-
-    /**
-     * Maximum number of parallel connections for bulk data transfer
+     * Number of parallel storage connections for bulk data transfer, 0 for the default of 1.
+     * At most 10 are opened
      */
     const val OFFSET_max_connections: Long = 72L
     fun max_connections(struct: MemorySegment): Int =
@@ -6404,6 +7422,10 @@ object lore_global_args_t {
     /**
      * Keep store references alive after a repository call completes to avoid
      * repeated store open/close cycles for consecutive API calls in the same process.
+     * The stores stay locked meanwhile, so another process using them waits. With
+     * `LORE_STORE_RETAIN` set to `1` or `true` in the environment of the process running
+     * the call, the stores are kept after every call whether or not this is set,
+     * unlocked, and the next call reloads them only if another process changed them.
      */
     const val OFFSET_store_keep_alive: Long = 112L
     fun store_keep_alive(struct: MemorySegment): Byte =
@@ -6413,8 +7435,8 @@ object lore_global_args_t {
     }
 
     /**
-     * Duration in seconds to keep store references alive. Only used when
-     * `store_keep_alive` is set. 0 means use the default (10 seconds).
+     * Duration in seconds to keep store references alive, when `store_keep_alive` or
+     * `LORE_STORE_RETAIN` is set. 0 means use the default (10 seconds).
      */
     const val OFFSET_store_keep_alive_seconds: Long = 120L
     fun store_keep_alive_seconds(struct: MemorySegment): Long =
@@ -6443,6 +7465,85 @@ object lore_global_args_t {
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_cache)
     fun cache(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_cache, value)
+    }
+
+    /**
+     * Authentication token to use instead of the one held in the secure token
+     * store. Authorization tokens are exchanged from it as they are needed.
+     * 
+     * Supplying either token puts the call in external-credential mode: `identity`
+     * must be left empty, since it is read from the token.
+     */
+    const val OFFSET_identity_token: Long = 136L
+    fun identity_token(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_identity_token, 16L)
+
+    /**
+     * Authorization token to use instead of exchanging one with the auth
+     * service. If given, will not perform token exchanges.
+     * 
+     * Supplying either token puts the call in external-credential mode: `identity`
+     * must be left empty, since it is read from the token.
+     */
+    const val OFFSET_access_token: Long = 152L
+    fun access_token(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_access_token, 16L)
+
+    /**
+     * How much an operation reports about what it cost.
+     * 
+     * - `0` — no statistics event, and no per-fragment counters kept for one.
+     * - `1` — one statistics event when the operation finishes: per-action file
+     * counts, and the fragment, local-store and remote-store totals.
+     * - `2` — also a `FragmentWrite` event per stored fragment, which describes
+     * the shape of what was written rather than its sums. One event per
+     * fragment is the cost of this level.
+     * 
+     * A level above the highest known behaves as the highest known.
+     */
+    const val OFFSET_stats: Long = 168L
+    fun stats(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_stats)
+    fun stats(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_stats, value)
+    }
+
+    /**
+     * How often an operation emits progress events, in milliseconds. Applies
+     * whatever `stats` is set to, statistics being reported once at the end
+     * rather than on an interval. Zero takes [`DEFAULT_EVENT_INTERVAL_MS`].
+     */
+    const val OFFSET_event_interval_ms: Long = 176L
+    fun event_interval_ms(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_event_interval_ms)
+    fun event_interval_ms(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_event_interval_ms, value)
+    }
+
+    /**
+     * Which authentication path to take if the server advertises both its
+     * gRPC auth service and an OIDC issuer.
+     */
+    const val OFFSET_auth_mode: Long = 184L
+    fun auth_mode(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_auth_mode)
+    fun auth_mode(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_auth_mode, value)
+    }
+
+    /**
+     * Treat the remote as a trusted source, for a caller within its
+     * infrastructure where performance comes first: payloads fetched from it
+     * have only their sizes checked against their length, are never hashed,
+     * and are decompressed only where their content is read. A storage handle
+     * takes it from the globals it is opened with. Any non-zero value trusts
+     * the remote, so a caller zeroes the whole struct, padding included
+     */
+    const val OFFSET_trust_remote: Long = 188L
+    fun trust_remote(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_trust_remote)
+    fun trust_remote(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_trust_remote, value)
     }
 }
 
@@ -6922,6 +8023,64 @@ object lore_link_add_args_t {
 }
 
 /**
+ * Data for an event reporting how a link's branch was resolved in the linked
+ * repository. A repository can be linked at more than one mount path, so a
+ * consumer must key on `link_path` together with `link_repository`.
+ */
+object lore_link_branch_create_event_data_t {
+    const val SIZE: Long = 88L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_string_t.LAYOUT.withName("link_path"),
+        lore_partition_t.LAYOUT.withName("link_repository"),
+        lore_context_t.LAYOUT.withName("branch"),
+        lore_hash_t.LAYOUT.withName("revision"),
+        ValueLayout.JAVA_BYTE.withName("reused"),
+        MemoryLayout.paddingLayout(7),
+    ).withName("lore_link_branch_create_event_data_t") as StructLayout
+
+    /**
+     * Path of the link within the parent repository.
+     */
+    const val OFFSET_link_path: Long = 0L
+    fun link_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_link_path, 16L)
+
+    /**
+     * Identifier of the repository the link points to.
+     */
+    const val OFFSET_link_repository: Long = 16L
+    fun link_repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_link_repository, 16L)
+
+    /**
+     * Identifier of the branch in the linked repository.
+     */
+    const val OFFSET_branch: Long = 32L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
+     * Hash of the latest revision on that branch.
+     */
+    const val OFFSET_revision: Long = 48L
+    fun revision(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_revision, 32L)
+
+    /**
+     * Set when a branch with this identifier was already present and was
+     * reused rather than created.
+     */
+    const val OFFSET_reused: Long = 80L
+    fun reused(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_reused)
+    fun reused(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_reused, value)
+    }
+}
+
+/**
  * Data for an event reporting a change to a link.
  */
 object lore_link_change_event_data_t {
@@ -6977,10 +8136,12 @@ object lore_link_change_event_data_t {
 }
 
 /**
- * Data for an event describing a single link in a repository.
+ * Data for an event describing a single link in a repository. Carries the
+ * branch identifier rather than its name; a consumer that wants the name
+ * resolves it, so listing links costs no branch metadata reads.
  */
 object lore_link_entry_event_data_t {
-    const val SIZE: Long = 136L
+    const val SIZE: Long = 120L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -6992,10 +8153,10 @@ object lore_link_entry_event_data_t {
         MemoryLayout.paddingLayout(4),
         lore_string_t.LAYOUT.withName("source_path"),
         lore_context_t.LAYOUT.withName("branch"),
-        lore_string_t.LAYOUT.withName("branch_name"),
+        ValueLayout.JAVA_BYTE.withName("tracking"),
         lore_hash_t.LAYOUT.withName("revision"),
+        MemoryLayout.paddingLayout(3),
         ValueLayout.JAVA_INT.withName("flags"),
-        MemoryLayout.paddingLayout(4),
     ).withName("lore_link_entry_event_data_t") as StructLayout
 
     /**
@@ -7047,27 +8208,102 @@ object lore_link_entry_event_data_t {
         struct.asSlice(OFFSET_branch, 16L)
 
     /**
-     * Name of the branch the link is pinned to.
+     * Set when the link follows its parent's branch instead of being pinned to
+     * an explicit one, in which case `branch` is the branch it resolved to.
      */
-    const val OFFSET_branch_name: Long = 80L
-    fun branch_name(struct: MemorySegment): MemorySegment =
-        struct.asSlice(OFFSET_branch_name, 16L)
+    const val OFFSET_tracking: Long = 80L
+    fun tracking(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_tracking)
+    fun tracking(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_tracking, value)
+    }
 
     /**
      * Hash of the revision the link is pinned to.
      */
-    const val OFFSET_revision: Long = 96L
+    const val OFFSET_revision: Long = 81L
     fun revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_revision, 32L)
 
     /**
      * Link flags.
      */
-    const val OFFSET_flags: Long = 128L
+    const val OFFSET_flags: Long = 116L
     fun flags(struct: MemorySegment): Int =
         struct.get(ValueLayout.JAVA_INT, OFFSET_flags)
     fun flags(struct: MemorySegment, value: Int) {
         struct.set(ValueLayout.JAVA_INT, OFFSET_flags, value)
+    }
+}
+
+/**
+ * Arguments for reading detailed information about a single link.
+ */
+object lore_link_info_args_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_string_t.LAYOUT.withName("link_path"),
+    ).withName("lore_link_info_args_t") as StructLayout
+
+    /**
+     * Path within this repository of the link to describe
+     */
+    const val OFFSET_link_path: Long = 0L
+    fun link_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_link_path, 16L)
+}
+
+/**
+ * Data for an event describing a single link in detail: everything `LinkEntry`
+ * reports, plus the state only `link info` gathers.
+ */
+object lore_link_info_event_data_t {
+    const val SIZE: Long = 168L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_link_entry_event_data_t.LAYOUT.withName("entry"),
+        lore_hash_t.LAYOUT.withName("remote_revision"),
+        ValueLayout.JAVA_INT.withName("staged_state"),
+        MemoryLayout.paddingLayout(4),
+        ValueLayout.JAVA_LONG.withName("staged_file_count"),
+    ).withName("lore_link_info_event_data_t") as StructLayout
+
+    /**
+     * The link as `LinkEntry` reports it.
+     */
+    const val OFFSET_entry: Long = 0L
+    fun entry(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_entry, 120L)
+
+    /**
+     * Hash of the remote latest revision of the pinned branch, zero when the
+     * remote was not consulted.
+     */
+    const val OFFSET_remote_revision: Long = 120L
+    fun remote_revision(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_remote_revision, 32L)
+
+    /**
+     * Staged change to the link itself.
+     */
+    const val OFFSET_staged_state: Long = 152L
+    fun staged_state(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_staged_state)
+    fun staged_state(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_staged_state, value)
+    }
+
+    /**
+     * Number of staged files inside the linked repository.
+     */
+    const val OFFSET_staged_file_count: Long = 160L
+    fun staged_file_count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_staged_file_count)
+    fun staged_file_count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_staged_file_count, value)
     }
 }
 
@@ -7081,6 +8317,25 @@ object lore_link_list_args_t {
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         ValueLayout.JAVA_INT.withName("_unused"),
     ).withName("lore_link_list_args_t") as StructLayout
+
+    const val OFFSET__unused: Long = 0L
+    fun _unused(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET__unused)
+    fun _unused(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET__unused, value)
+    }
+}
+
+/**
+ * Arguments for listing the links whose linked repositories hold staged changes.
+ */
+object lore_link_list_staged_args_t {
+    const val SIZE: Long = 4L
+    const val ALIGNMENT: Long = 4L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_INT.withName("_unused"),
+    ).withName("lore_link_list_staged_args_t") as StructLayout
 
     const val OFFSET__unused: Long = 0L
     fun _unused(struct: MemorySegment): Int =
@@ -7788,11 +9043,11 @@ object lore_metadata_t {
         MemoryLayout.unionLayout(
         lore_address_t.LAYOUT.withName("address"),
         MemoryLayout.structLayout(ValueLayout.JAVA_BYTE.withName("boolean"), MemoryLayout.paddingLayout(47)).withName("boolean"),
-        MemoryLayout.structLayout(lore_binary_t.LAYOUT.withName("binary"), MemoryLayout.paddingLayout(32)).withName("binary"),
         MemoryLayout.structLayout(lore_context_t.LAYOUT.withName("context"), MemoryLayout.paddingLayout(32)).withName("context"),
         MemoryLayout.structLayout(lore_hash_t.LAYOUT.withName("hash"), MemoryLayout.paddingLayout(16)).withName("hash"),
         MemoryLayout.structLayout(ValueLayout.JAVA_LONG.withName("numeric"), MemoryLayout.paddingLayout(40)).withName("numeric"),
         MemoryLayout.structLayout(lore_string_t.LAYOUT.withName("string"), MemoryLayout.paddingLayout(32)).withName("string"),
+        MemoryLayout.structLayout(lore_binary_t.LAYOUT.withName("binary"), MemoryLayout.paddingLayout(32)).withName("binary"),
     ).withName("union"),
     ).withName("lore_metadata_t") as StructLayout
 
@@ -8148,15 +9403,14 @@ object lore_repository_clone_args_t {
         lore_string_t.LAYOUT.withName("revision"),
         lore_string_t.LAYOUT.withName("view"),
         ValueLayout.JAVA_BYTE.withName("bare"),
-        ValueLayout.JAVA_BYTE.withName("virtually"),
         ValueLayout.JAVA_BYTE.withName("direct_file_write"),
-        ValueLayout.JAVA_BYTE.withName("direct_file_io"),
-        MemoryLayout.paddingLayout(4),
+        MemoryLayout.paddingLayout(2),
+        ValueLayout.JAVA_INT.withName("vfs"),
         lore_string_t.LAYOUT.withName("layer"),
         lore_string_t.LAYOUT.withName("layer_metadata"),
         lore_string_t.LAYOUT.withName("prefetch"),
-        ValueLayout.JAVA_BYTE.withName("use_shared_store"),
-        MemoryLayout.paddingLayout(7),
+        ValueLayout.JAVA_INT.withName("use_shared_store"),
+        MemoryLayout.paddingLayout(4),
         lore_string_t.LAYOUT.withName("shared_store_path"),
         ValueLayout.JAVA_BYTE.withName("no_tracking"),
         MemoryLayout.paddingLayout(7),
@@ -8199,19 +9453,9 @@ object lore_repository_clone_args_t {
     }
 
     /**
-     * Clone virtually using split-write filesystem
-     */
-    const val OFFSET_virtually: Long = 49L
-    fun virtually(struct: MemorySegment): Byte =
-        struct.get(ValueLayout.JAVA_BYTE, OFFSET_virtually)
-    fun virtually(struct: MemorySegment, value: Byte) {
-        struct.set(ValueLayout.JAVA_BYTE, OFFSET_virtually, value)
-    }
-
-    /**
      * Use direct file write
      */
-    const val OFFSET_direct_file_write: Long = 50L
+    const val OFFSET_direct_file_write: Long = 49L
     fun direct_file_write(struct: MemorySegment): Byte =
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_direct_file_write)
     fun direct_file_write(struct: MemorySegment, value: Byte) {
@@ -8219,13 +9463,13 @@ object lore_repository_clone_args_t {
     }
 
     /**
-     * Use direct file I/O instead of memory mapping files
+     * Which VFS to use, if any
      */
-    const val OFFSET_direct_file_io: Long = 51L
-    fun direct_file_io(struct: MemorySegment): Byte =
-        struct.get(ValueLayout.JAVA_BYTE, OFFSET_direct_file_io)
-    fun direct_file_io(struct: MemorySegment, value: Byte) {
-        struct.set(ValueLayout.JAVA_BYTE, OFFSET_direct_file_io, value)
+    const val OFFSET_vfs: Long = 52L
+    fun vfs(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_vfs)
+    fun vfs(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_vfs, value)
     }
 
     /**
@@ -8250,13 +9494,14 @@ object lore_repository_clone_args_t {
         struct.asSlice(OFFSET_prefetch, 16L)
 
     /**
-     * Use the shared store instead of a local immutable store
+     * Whether to use the shared store instead of a local immutable store. Zero-initialized
+     * (`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting.
      */
     const val OFFSET_use_shared_store: Long = 104L
-    fun use_shared_store(struct: MemorySegment): Byte =
-        struct.get(ValueLayout.JAVA_BYTE, OFFSET_use_shared_store)
-    fun use_shared_store(struct: MemorySegment, value: Byte) {
-        struct.set(ValueLayout.JAVA_BYTE, OFFSET_use_shared_store, value)
+    fun use_shared_store(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_use_shared_store)
+    fun use_shared_store(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_use_shared_store, value)
     }
 
     /**
@@ -8466,7 +9711,8 @@ object lore_repository_clone_count_data_t {
 }
 
 /**
- * Data for the event emitted when a clone finishes.
+ * Data for the event emitted when a clone succeeds. A clone that fails sends no such event, and
+ * reports its outcome on the complete event as every clone does.
  */
 object lore_repository_clone_end_event_data_t {
     const val SIZE: Long = 120L
@@ -8566,7 +9812,7 @@ object lore_repository_config_get_event_data_t {
 }
 
 /**
- * Arguments for creating a new repository at the specified URL.
+ * Arguments for creating a new repository.
  */
 object lore_repository_create_args_t {
     const val SIZE: Long = 72L
@@ -8576,13 +9822,15 @@ object lore_repository_create_args_t {
         lore_string_t.LAYOUT.withName("repository_url"),
         lore_string_t.LAYOUT.withName("description"),
         lore_string_t.LAYOUT.withName("id"),
-        ValueLayout.JAVA_BYTE.withName("use_shared_store"),
-        MemoryLayout.paddingLayout(7),
+        ValueLayout.JAVA_INT.withName("vfs"),
+        ValueLayout.JAVA_INT.withName("use_shared_store"),
         lore_string_t.LAYOUT.withName("shared_store_path"),
     ).withName("lore_repository_create_args_t") as StructLayout
 
     /**
-     * URL to the repository
+     * URL to the repository. Treated as the repository name instead when the call is
+     * offline or local, where an empty value names it after the directory it is
+     * created in. A URL naming no host is an error otherwise.
      */
     const val OFFSET_repository_url: Long = 0L
     fun repository_url(struct: MemorySegment): MemorySegment =
@@ -8603,13 +9851,24 @@ object lore_repository_create_args_t {
         struct.asSlice(OFFSET_id, 16L)
 
     /**
-     * Use the shared store instead of a local immutable store
+     * Which VFS to use, if any
      */
-    const val OFFSET_use_shared_store: Long = 48L
-    fun use_shared_store(struct: MemorySegment): Byte =
-        struct.get(ValueLayout.JAVA_BYTE, OFFSET_use_shared_store)
-    fun use_shared_store(struct: MemorySegment, value: Byte) {
-        struct.set(ValueLayout.JAVA_BYTE, OFFSET_use_shared_store, value)
+    const val OFFSET_vfs: Long = 48L
+    fun vfs(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_vfs)
+    fun vfs(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_vfs, value)
+    }
+
+    /**
+     * Whether to use the shared store instead of a local immutable store. Zero-initialized
+     * (`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting.
+     */
+    const val OFFSET_use_shared_store: Long = 52L
+    fun use_shared_store(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_use_shared_store)
+    fun use_shared_store(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_use_shared_store, value)
     }
 
     /**
@@ -8659,12 +9918,13 @@ object lore_repository_create_event_data_t {
  * Descriptive data for a repository.
  */
 object lore_repository_data_event_data_t {
-    const val SIZE: Long = 120L
+    const val SIZE: Long = 136L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         lore_string_t.LAYOUT.withName("remote_url"),
         lore_partition_t.LAYOUT.withName("id"),
+        lore_instance_id_t.LAYOUT.withName("instance_id"),
         lore_string_t.LAYOUT.withName("name"),
         lore_string_t.LAYOUT.withName("description"),
         lore_context_t.LAYOUT.withName("default_branch"),
@@ -8688,49 +9948,77 @@ object lore_repository_data_event_data_t {
         struct.asSlice(OFFSET_id, 16L)
 
     /**
+     * Instance identifier.
+     */
+    const val OFFSET_instance_id: Long = 32L
+    fun instance_id(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_instance_id, 16L)
+
+    /**
      * Repository name.
      */
-    const val OFFSET_name: Long = 32L
+    const val OFFSET_name: Long = 48L
     fun name(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_name, 16L)
 
     /**
      * Repository description.
      */
-    const val OFFSET_description: Long = 48L
+    const val OFFSET_description: Long = 64L
     fun description(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_description, 16L)
 
     /**
      * Identifier of the default branch.
      */
-    const val OFFSET_default_branch: Long = 64L
+    const val OFFSET_default_branch: Long = 80L
     fun default_branch(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_default_branch, 16L)
 
     /**
      * Name of the default branch.
      */
-    const val OFFSET_default_branch_name: Long = 80L
+    const val OFFSET_default_branch_name: Long = 96L
     fun default_branch_name(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_default_branch_name, 16L)
 
     /**
      * Name of the user who created the repository.
      */
-    const val OFFSET_creator: Long = 96L
+    const val OFFSET_creator: Long = 112L
     fun creator(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_creator, 16L)
 
     /**
-     * Creation time of the repository, in seconds since the Unix epoch.
+     * Creation time of the repository, in milliseconds since the Unix
+     * epoch.
      */
-    const val OFFSET_created: Long = 112L
+    const val OFFSET_created: Long = 128L
     fun created(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_created)
     fun created(struct: MemorySegment, value: Long) {
         struct.set(ValueLayout.JAVA_LONG, OFFSET_created, value)
     }
+}
+
+/**
+ * Arguments for deleting a remote repository.
+ */
+object lore_repository_delete_args_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_string_t.LAYOUT.withName("repository_url"),
+    ).withName("lore_repository_delete_args_t") as StructLayout
+
+    /**
+     * URL of the remote repository to delete, or a name or ID resolved against the remote of
+     * the repository at `repository_path`
+     */
+    const val OFFSET_repository_url: Long = 0L
+    fun repository_url(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository_url, 16L)
 }
 
 /**
@@ -8930,7 +10218,11 @@ object lore_repository_instance_event_data_t {
         struct.asSlice(OFFSET_revision, 32L)
 
     /**
-     * Non-zero if the instance path no longer exists on disk
+     * Non-zero if the registration no longer describes a live checkout: 1 when
+     * the path no longer exists on disk, 2 when the path holds a repository
+     * whose `.lore/instance` names a different instance (superseded by a
+     * re-create or re-clone), 3 when the path holds no readable
+     * `.lore/instance` at all
      */
     const val OFFSET_stale: Long = 96L
     fun stale(struct: MemorySegment): Byte =
@@ -9436,7 +10728,7 @@ object lore_repository_status_file_event_data_t {
     ).withName("lore_repository_status_file_event_data_t") as StructLayout
 
     /**
-     * Path of the file relative to the repository root.
+     * Path of the file, relative to the root of the working tree.
      */
     const val OFFSET_path: Long = 0L
     fun path(struct: MemorySegment): MemorySegment =
@@ -9740,7 +11032,7 @@ object lore_repository_status_revision_event_data_t {
  * the nodes that remained dirty after the filesystem verification.
  */
 object lore_repository_status_summary_event_data_t {
-    const val SIZE: Long = 40L
+    const val SIZE: Long = 56L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -9749,6 +11041,8 @@ object lore_repository_status_summary_event_data_t {
         ValueLayout.JAVA_LONG.withName("modifies"),
         ValueLayout.JAVA_LONG.withName("moves"),
         ValueLayout.JAVA_LONG.withName("copies"),
+        ValueLayout.JAVA_LONG.withName("hash_checks"),
+        ValueLayout.JAVA_LONG.withName("mtime_matches"),
     ).withName("lore_repository_status_summary_event_data_t") as StructLayout
 
     /**
@@ -9799,6 +11093,26 @@ object lore_repository_status_summary_event_data_t {
         struct.get(ValueLayout.JAVA_LONG, OFFSET_copies)
     fun copies(struct: MemorySegment, value: Long) {
         struct.set(ValueLayout.JAVA_LONG, OFFSET_copies, value)
+    }
+
+    /**
+     * Number of files the answer required reading, including any that could not be read.
+     */
+    const val OFFSET_hash_checks: Long = 40L
+    fun hash_checks(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_hash_checks)
+    fun hash_checks(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_hash_checks, value)
+    }
+
+    /**
+     * Number of files a recorded modified time answered for, sparing them a hash check.
+     */
+    const val OFFSET_mtime_matches: Long = 48L
+    fun mtime_matches(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_mtime_matches)
+    fun mtime_matches(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_mtime_matches, value)
     }
 }
 
@@ -10598,6 +11912,33 @@ object lore_revision_amend_args_t {
 }
 
 /**
+ * Arguments for bisecting the revision range between two revisions.
+ */
+object lore_revision_bisect_args_t {
+    const val SIZE: Long = 32L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_string_t.LAYOUT.withName("start"),
+        lore_string_t.LAYOUT.withName("end"),
+    ).withName("lore_revision_bisect_args_t") as StructLayout
+
+    /**
+     * Starting (known-good) revision of the bisect range
+     */
+    const val OFFSET_start: Long = 0L
+    fun start(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_start, 16L)
+
+    /**
+     * Ending (known-bad) revision of the bisect range
+     */
+    const val OFFSET_end: Long = 16L
+    fun end(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_end, 16L)
+}
+
+/**
  * Progress of a bisect search across a range of revisions.
  */
 object lore_revision_bisect_event_data_t {
@@ -10654,10 +11995,60 @@ object lore_revision_bisect_event_data_t {
 }
 
 /**
+ * Arguments for cherry-picking a revision onto the current branch.
+ */
+object lore_revision_cherry_pick_args_t {
+    const val SIZE: Long = 56L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_string_t.LAYOUT.withName("revision"),
+        lore_string_t.LAYOUT.withName("message"),
+        ValueLayout.JAVA_BYTE.withName("no_commit"),
+        MemoryLayout.paddingLayout(7),
+        lore_string_array_t.LAYOUT.withName("inherit_metadata"),
+    ).withName("lore_revision_cherry_pick_args_t") as StructLayout
+
+    /**
+     * Revision to cherry pick
+     */
+    const val OFFSET_revision: Long = 0L
+    fun revision(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_revision, 16L)
+
+    /**
+     * Message to use for an auto-commit if no conflicts arise; empty uses the
+     * picked revision's message
+     */
+    const val OFFSET_message: Long = 16L
+    fun message(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_message, 16L)
+
+    /**
+     * Disable auto-commit even if no conflicts arise
+     */
+    const val OFFSET_no_commit: Long = 32L
+    fun no_commit(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_no_commit)
+    fun no_commit(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_no_commit, value)
+    }
+
+    /**
+     * Metadata keys to carry from the picked revision onto the revision this
+     * creates. Empty carries nothing; the single entry `*` carries every key
+     * that is not reserved to the cherry-pick itself.
+     */
+    const val OFFSET_inherit_metadata: Long = 40L
+    fun inherit_metadata(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_inherit_metadata, 16L)
+}
+
+/**
  * Arguments for committing staged changes into a new revision.
  */
 object lore_revision_commit_args_t {
-    const val SIZE: Long = 120L
+    const val SIZE: Long = 112L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -10668,8 +12059,6 @@ object lore_revision_commit_args_t {
         lore_string_t.LAYOUT.withName("layer"),
         lore_string_array_t.LAYOUT.withName("layer_paths"),
         lore_string_array_t.LAYOUT.withName("layer_messages"),
-        ValueLayout.JAVA_BYTE.withName("stats"),
-        MemoryLayout.paddingLayout(7),
     ).withName("lore_revision_commit_args_t") as StructLayout
 
     /**
@@ -10720,16 +12109,6 @@ object lore_revision_commit_args_t {
     const val OFFSET_layer_messages: Long = 96L
     fun layer_messages(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_layer_messages, 16L)
-
-    /**
-     * Emit per-fragment write stats during the commit
-     */
-    const val OFFSET_stats: Long = 112L
-    fun stats(struct: MemorySegment): Byte =
-        struct.get(ValueLayout.JAVA_BYTE, OFFSET_stats)
-    fun stats(struct: MemorySegment, value: Byte) {
-        struct.set(ValueLayout.JAVA_BYTE, OFFSET_stats, value)
-    }
 }
 
 /**
@@ -10977,6 +12356,37 @@ object lore_revision_commit_revision_event_data_t {
 }
 
 /**
+ * Event data reporting what a commit cost.
+ * 
+ * Emitted once, when the commit has drained every background write, at
+ * statistics level one and above. A commit that failed reports what it had done
+ * by then.
+ */
+object lore_revision_commit_stats_event_data_t {
+    const val SIZE: Long = 272L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_commit_file_stats_data_t.LAYOUT.withName("files"),
+        lore_fragment_stats_data_t.LAYOUT.withName("fragments"),
+    ).withName("lore_revision_commit_stats_event_data_t") as StructLayout
+
+    /**
+     * Files committed, by action.
+     */
+    const val OFFSET_files: Long = 0L
+    fun files(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_files, 80L)
+
+    /**
+     * What the commit's fragment writes cost.
+     */
+    const val OFFSET_fragments: Long = 80L
+    fun fragments(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_fragments, 192L)
+}
+
+/**
  * Arguments for computing file-level differences between two revisions.
  */
 object lore_revision_diff_args_t {
@@ -11015,7 +12425,7 @@ object lore_revision_diff_args_t {
  * Details of a single file that differs between two revisions.
  */
 object lore_revision_diff_file_event_data_t {
-    const val SIZE: Long = 120L
+    const val SIZE: Long = 136L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -11026,10 +12436,11 @@ object lore_revision_diff_file_event_data_t {
         lore_address_t.LAYOUT.withName("old_address"),
         lore_address_t.LAYOUT.withName("new_address"),
         MemoryLayout.paddingLayout(2),
+        lore_string_t.LAYOUT.withName("from_path"),
     ).withName("lore_revision_diff_file_event_data_t") as StructLayout
 
     /**
-     * Path of the file relative to the repository root.
+     * Path of the file, relative to the root of the working tree.
      */
     const val OFFSET_path: Long = 0L
     fun path(struct: MemorySegment): MemorySegment =
@@ -11078,6 +12489,14 @@ object lore_revision_diff_file_event_data_t {
     const val OFFSET_new_address: Long = 70L
     fun new_address(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_new_address, 48L)
+
+    /**
+     * Previous path of the file when it was moved or copied, relative to the root of the
+     * working tree. Empty otherwise.
+     */
+    const val OFFSET_from_path: Long = 120L
+    fun from_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_from_path, 16L)
 }
 
 /**
@@ -11168,7 +12587,8 @@ object lore_revision_history_args_t {
         struct.asSlice(OFFSET_branch, 16L)
 
     /**
-     * Stop at revisions created before this date (Unix timestamp; 0 disables)
+     * Stop at revisions created before this date (milliseconds since the
+     * Unix epoch; 0 disables)
      */
     const val OFFSET_date: Long = 32L
     fun date(struct: MemorySegment): Long =
@@ -11310,7 +12730,7 @@ object lore_revision_info_args_t {
  * Per-file change information between a revision and its parent.
  */
 object lore_revision_info_delta_event_data_t {
-    const val SIZE: Long = 32L
+    const val SIZE: Long = 48L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -11321,6 +12741,7 @@ object lore_revision_info_delta_event_data_t {
         ValueLayout.JAVA_BYTE.withName("flag_merged"),
         ValueLayout.JAVA_BYTE.withName("flag_file"),
         MemoryLayout.paddingLayout(1),
+        lore_string_t.LAYOUT.withName("from_path"),
     ).withName("lore_revision_info_delta_event_data_t") as StructLayout
 
     /**
@@ -11379,6 +12800,13 @@ object lore_revision_info_delta_event_data_t {
     fun flag_file(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_flag_file, value)
     }
+
+    /**
+     * Path the file was moved from in this revision. Empty otherwise.
+     */
+    const val OFFSET_from_path: Long = 32L
+    fun from_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_from_path, 16L)
 }
 
 /**
@@ -11529,17 +12957,23 @@ object lore_revision_metadata_set_args_t {
 }
 
 /**
- * Information about a revision being resolved from a signature.
+ * Information about a revision being resolved on a branch.
+ * 
+ * Reported before the lookup runs, since finding a revision by number can walk
+ * a long stretch of history. A specifier that names no branch resolves to
+ * itself and reports nothing.
  */
 object lore_revision_resolve_event_data_t {
-    const val SIZE: Long = 64L
+    const val SIZE: Long = 88L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         lore_partition_t.LAYOUT.withName("repository"),
         lore_context_t.LAYOUT.withName("branch"),
-        lore_string_t.LAYOUT.withName("revision"),
+        ValueLayout.JAVA_INT.withName("target"),
+        MemoryLayout.paddingLayout(4),
         ValueLayout.JAVA_LONG.withName("revision_number"),
+        lore_hash_t.LAYOUT.withName("revision"),
         ValueLayout.JAVA_BYTE.withName("remote"),
         ValueLayout.JAVA_BYTE.withName("local"),
         MemoryLayout.paddingLayout(6),
@@ -11560,16 +12994,19 @@ object lore_revision_resolve_event_data_t {
         struct.asSlice(OFFSET_branch, 16L)
 
     /**
-     * If set to non-empty, the partial hash being resolved
+     * What the specifier names on the branch
      */
-    const val OFFSET_revision: Long = 32L
-    fun revision(struct: MemorySegment): MemorySegment =
-        struct.asSlice(OFFSET_revision, 16L)
+    const val OFFSET_target: Long = 32L
+    fun target(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_target)
+    fun target(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_target, value)
+    }
 
     /**
-     * If set to non-zero, the revision number being resolved
+     * The revision number being resolved, zero unless `target` is `Number`
      */
-    const val OFFSET_revision_number: Long = 48L
+    const val OFFSET_revision_number: Long = 40L
     fun revision_number(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_revision_number)
     fun revision_number(struct: MemorySegment, value: Long) {
@@ -11577,9 +13014,16 @@ object lore_revision_resolve_event_data_t {
     }
 
     /**
+     * The revision being resolved, zero unless `target` is `Signature`
+     */
+    const val OFFSET_revision: Long = 48L
+    fun revision(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_revision, 32L)
+
+    /**
      * Resolving using remote data
      */
-    const val OFFSET_remote: Long = 56L
+    const val OFFSET_remote: Long = 80L
     fun remote(struct: MemorySegment): Byte =
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_remote)
     fun remote(struct: MemorySegment, value: Byte) {
@@ -11589,7 +13033,7 @@ object lore_revision_resolve_event_data_t {
     /**
      * Resolving using local data
      */
-    const val OFFSET_local: Long = 57L
+    const val OFFSET_local: Long = 81L
     fun local(struct: MemorySegment): Byte =
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_local)
     fun local(struct: MemorySegment, value: Byte) {
@@ -12044,7 +13488,7 @@ object lore_revision_revert_unresolve_args_t {
  * Arguments for synchronizing the working directory to a target revision.
  */
 object lore_revision_sync_args_t {
-    const val SIZE: Long = 64L
+    const val SIZE: Long = 80L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -12057,6 +13501,7 @@ object lore_revision_sync_args_t {
         ValueLayout.JAVA_BYTE.withName("dependency_recursive"),
         MemoryLayout.paddingLayout(3),
         ValueLayout.JAVA_INT.withName("dependency_depth_limit"),
+        lore_string_t.LAYOUT.withName("view"),
     ).withName("lore_revision_sync_args_t") as StructLayout
 
     /**
@@ -12119,6 +13564,14 @@ object lore_revision_sync_args_t {
     fun dependency_depth_limit(struct: MemorySegment, value: Int) {
         struct.set(ValueLayout.JAVA_INT, OFFSET_dependency_depth_limit, value)
     }
+
+    /**
+     * View filter file to leave the working files materialized under; empty to keep the view the
+     * instance holds
+     */
+    const val OFFSET_view: Long = 64L
+    fun view(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_view, 16L)
 }
 
 /**
@@ -12137,7 +13590,7 @@ object lore_revision_sync_file_event_data_t {
     ).withName("lore_revision_sync_file_event_data_t") as StructLayout
 
     /**
-     * Path of the file relative to the repository root.
+     * Path of the file, relative to the root of the working tree.
      */
     const val OFFSET_path: Long = 0L
     fun path(struct: MemorySegment): MemorySegment =
@@ -12364,7 +13817,9 @@ object lore_revision_sync_target_event_data_t {
         ValueLayout.JAVA_LONG.withName("target_revision_number"),
         ValueLayout.JAVA_BYTE.withName("is_latest"),
         ValueLayout.JAVA_BYTE.withName("local"),
-        MemoryLayout.paddingLayout(6),
+        ValueLayout.JAVA_BYTE.withName("remote_available"),
+        ValueLayout.JAVA_BYTE.withName("remote_authorized"),
+        MemoryLayout.paddingLayout(4),
     ).withName("lore_revision_sync_target_event_data_t") as StructLayout
 
     /**
@@ -12448,6 +13903,26 @@ object lore_revision_sync_target_event_data_t {
     fun local(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_local, value)
     }
+
+    /**
+     * Remote configured for the repository.
+     */
+    const val OFFSET_remote_available: Long = 146L
+    fun remote_available(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_remote_available)
+    fun remote_available(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_remote_available, value)
+    }
+
+    /**
+     * Remote branch query returned an authoritative answer, identity is authorized to access the repository.
+     */
+    const val OFFSET_remote_authorized: Long = 147L
+    fun remote_authorized(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_remote_authorized)
+    fun remote_authorized(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_remote_authorized, value)
+    }
 }
 
 /**
@@ -12458,19 +13933,19 @@ object lore_revision_tree_add_args_t {
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("batch_id"),
         lore_revision_tree_t.LAYOUT.withName("handle"),
         lore_revision_tree_add_entry_array_t.LAYOUT.withName("entries"),
     ).withName("lore_revision_tree_add_args_t") as StructLayout
 
     /**
-     * Per-call correlation id echoed back in `BATCH_COMPLETE`
+     * Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE`
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_batch_id: Long = 0L
+    fun batch_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_batch_id)
+    fun batch_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_batch_id, value)
     }
 
     /**
@@ -12490,26 +13965,28 @@ object lore_revision_tree_add_args_t {
 
 /**
  * Terminal per-entry event for `add`. On success `node_id` is the
- * newly-allocated child; on failure `node_id` is undefined.
+ * newly-allocated child; on failure it is the invalid-node sentinel, since
+ * nothing was created. The call as a whole reports separately on
+ * `RevisionTreeBatchComplete`.
  */
 object lore_revision_tree_add_complete_event_data_t {
     const val SIZE: Long = 16L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("entry_id"),
         ValueLayout.JAVA_INT.withName("node_id"),
         ValueLayout.JAVA_INT.withName("error_code"),
     ).withName("lore_revision_tree_add_complete_event_data_t") as StructLayout
 
     /**
-     * Correlation id of the originating call.
+     * Correlation id of the entry this reports, not of the call.
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
     }
 
     /**
@@ -12576,9 +14053,9 @@ object lore_revision_tree_add_entry_t {
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("entry_id"),
         ValueLayout.JAVA_INT.withName("parent_node_id"),
-        ValueLayout.JAVA_INT.withName("parent_entry"),
+        ValueLayout.JAVA_INT.withName("parent_entry_index"),
         lore_string_t.LAYOUT.withName("name"),
         ValueLayout.JAVA_INT.withName("kind"),
         ValueLayout.JAVA_SHORT.withName("mode"),
@@ -12588,17 +14065,17 @@ object lore_revision_tree_add_entry_t {
     ).withName("lore_revision_tree_add_entry_t") as StructLayout
 
     /**
-     * Caller-chosen id echoed back in this entry's `ADD_COMPLETE`
+     * Caller-chosen id echoed back as `entry_id` on this entry's `ADD_COMPLETE`
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
     }
 
     /**
-     * Parent for the new node; the invalid-node sentinel selects `parent_entry`
+     * Parent for the new node; the invalid-node sentinel selects `parent_entry_index`
      */
     const val OFFSET_parent_node_id: Long = 8L
     fun parent_node_id(struct: MemorySegment): Int =
@@ -12611,11 +14088,11 @@ object lore_revision_tree_add_entry_t {
      * Index of an earlier entry in this batch whose new node is the parent;
      * read only when `parent_node_id` is the invalid-node sentinel
      */
-    const val OFFSET_parent_entry: Long = 12L
-    fun parent_entry(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_parent_entry)
-    fun parent_entry(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_parent_entry, value)
+    const val OFFSET_parent_entry_index: Long = 12L
+    fun parent_entry_index(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_parent_entry_index)
+    fun parent_entry_index(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_parent_entry_index, value)
     }
 
     /**
@@ -12664,8 +14141,8 @@ object lore_revision_tree_add_entry_t {
 }
 
 /**
- * Terminal event for a batch write call as a whole, carrying the call's own id
- * rather than any entry's.
+ * Terminal event for a batch write call as a whole, carrying the `batch_id` the
+ * call was submitted under rather than any entry's `entry_id`.
  * 
  * Every batch write verb emits exactly one of these, after any per-entry
  * terminals and before `Complete`. The error code is `NONE` when the call did
@@ -12678,19 +14155,19 @@ object lore_revision_tree_batch_complete_event_data_t {
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("batch_id"),
         ValueLayout.JAVA_INT.withName("error_code"),
         MemoryLayout.paddingLayout(4),
     ).withName("lore_revision_tree_batch_complete_event_data_t") as StructLayout
 
     /**
-     * Correlation id of the originating call
+     * Correlation id the call was submitted under
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_batch_id: Long = 0L
+    fun batch_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_batch_id)
+    fun batch_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_batch_id, value)
     }
 
     /**
@@ -12720,8 +14197,9 @@ object lore_revision_tree_child_event_data_t {
         lore_string_t.LAYOUT.withName("name"),
         ValueLayout.JAVA_INT.withName("parent_id"),
         ValueLayout.JAVA_INT.withName("kind"),
+        ValueLayout.JAVA_INT.withName("staged_action"),
         ValueLayout.JAVA_SHORT.withName("mode"),
-        MemoryLayout.paddingLayout(6),
+        MemoryLayout.paddingLayout(2),
         ValueLayout.JAVA_LONG.withName("size"),
         lore_address_t.LAYOUT.withName("address"),
         ValueLayout.JAVA_INT.withName("error_code"),
@@ -12776,9 +14254,20 @@ object lore_revision_tree_child_event_data_t {
     }
 
     /**
+     * The change staged on the node, as a `LoreNodeStagedAction`. A child
+     * staged for deletion is still listed, carrying the deletion here.
+     */
+    const val OFFSET_staged_action: Long = 40L
+    fun staged_action(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_staged_action)
+    fun staged_action(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_staged_action, value)
+    }
+
+    /**
      * The file mode bits.
      */
-    const val OFFSET_mode: Long = 40L
+    const val OFFSET_mode: Long = 44L
     fun mode(struct: MemorySegment): Short =
         struct.get(ValueLayout.JAVA_SHORT, OFFSET_mode)
     fun mode(struct: MemorySegment, value: Short) {
@@ -12881,13 +14370,12 @@ object lore_revision_tree_close_complete_event_data_t {
  * Arguments for `lore_revision_tree_commit`.
  */
 object lore_revision_tree_commit_args_t {
-    const val SIZE: Long = 40L
+    const val SIZE: Long = 24L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         ValueLayout.JAVA_LONG.withName("id"),
         lore_revision_tree_t.LAYOUT.withName("handle"),
-        lore_context_t.LAYOUT.withName("branch"),
         lore_revision_tree_commit_options_t.LAYOUT.withName("options"),
         MemoryLayout.paddingLayout(7),
     ).withName("lore_revision_tree_commit_args_t") as StructLayout
@@ -12910,26 +14398,23 @@ object lore_revision_tree_commit_args_t {
         struct.asSlice(OFFSET_handle, 8L)
 
     /**
-     * Branch whose tip is atomically advanced to the new revision
-     */
-    const val OFFSET_branch: Long = 16L
-    fun branch(struct: MemorySegment): MemorySegment =
-        struct.asSlice(OFFSET_branch, 16L)
-
-    /**
      * Commit tuneables (local-only vs remote-uploading)
      */
-    const val OFFSET_options: Long = 32L
+    const val OFFSET_options: Long = 16L
     fun options(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_options, 1L)
 }
 
 /**
  * Terminal per-call event for `commit`. On success `revision_hash` is the
- * newly-committed revision and `new_tip_hash` is `Hash::default()`. When
- * `error_code` reports `BranchAdvanced`, `new_tip_hash` carries the
- * observed branch tip so the caller can reload without an extra
- * `branch::load_latest` round-trip.
+ * newly-committed revision and `new_tip_hash` is `Hash::default()`.
+ * 
+ * A non-zero `new_tip_hash` means the branch had advanced past the revision
+ * the handle was built on, and carries the tip to reload from so the caller
+ * needs no extra `branch::load_latest` round-trip. It is the only signal for
+ * that case: no `LoreErrorCode` value names a tip collision, so `error_code`
+ * reports `Internal` with the reason in the completion detail — the same code
+ * the file-system commit returns.
  */
 object lore_revision_tree_commit_complete_event_data_t {
     const val SIZE: Long = 80L
@@ -13004,24 +14489,23 @@ object lore_revision_tree_commit_options_t {
  * Arguments for `lore_revision_tree_delete`.
  */
 object lore_revision_tree_delete_args_t {
-    const val SIZE: Long = 24L
+    const val SIZE: Long = 32L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("batch_id"),
         lore_revision_tree_t.LAYOUT.withName("handle"),
-        ValueLayout.JAVA_INT.withName("node_id"),
-        MemoryLayout.paddingLayout(4),
+        lore_revision_tree_delete_entry_array_t.LAYOUT.withName("entries"),
     ).withName("lore_revision_tree_delete_args_t") as StructLayout
 
     /**
-     * Per-call correlation id echoed back in events
+     * Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE`
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_batch_id: Long = 0L
+    fun batch_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_batch_id)
+    fun batch_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_batch_id, value)
     }
 
     /**
@@ -13032,47 +14516,125 @@ object lore_revision_tree_delete_args_t {
         struct.asSlice(OFFSET_handle, 8L)
 
     /**
-     * Subtree root to mark deleted, including its transitive children
+     * Subtrees to remove; each emits its own `DELETE_COMPLETE`
      */
-    const val OFFSET_node_id: Long = 16L
-    fun node_id(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_node_id)
-    fun node_id(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_node_id, value)
-    }
+    const val OFFSET_entries: Long = 16L
+    fun entries(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_entries, 16L)
 }
 
 /**
- * Terminal per-call event for `delete`.
+ * Terminal per-entry event for `delete`. The call as a whole reports
+ * separately on `RevisionTreeBatchComplete`.
  */
 object lore_revision_tree_delete_complete_event_data_t {
-    const val SIZE: Long = 16L
+    const val SIZE: Long = 24L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("entry_id"),
+        ValueLayout.JAVA_LONG.withName("node_count"),
         ValueLayout.JAVA_INT.withName("error_code"),
         MemoryLayout.paddingLayout(4),
     ).withName("lore_revision_tree_delete_complete_event_data_t") as StructLayout
 
     /**
-     * Correlation id of the originating call.
+     * Correlation id of the entry this reports, not of the call.
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
+    }
+
+    /**
+     * How many nodes the entry's subtree removed, staged and discarded
+     * together. Zero on failure, since nothing was removed.
+     */
+    const val OFFSET_node_count: Long = 8L
+    fun node_count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_node_count)
+    fun node_count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_node_count, value)
     }
 
     /**
      * The outcome of the call.
      */
-    const val OFFSET_error_code: Long = 8L
+    const val OFFSET_error_code: Long = 16L
     fun error_code(struct: MemorySegment): Int =
         struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
     fun error_code(struct: MemorySegment, value: Int) {
         struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
+    }
+}
+
+/**
+ * A contiguous array of elements described by a pointer and a count.
+ * Holds zero or more values of the element type laid out one after another.
+ */
+object lore_revision_tree_delete_entry_array_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("count"),
+    ).withName("lore_revision_tree_delete_entry_array_t") as StructLayout
+
+    /**
+     * Pointer to the first element.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of elements in the array.
+     */
+    const val OFFSET_count: Long = 8L
+    fun count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
+    fun count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_count, value)
+    }
+}
+
+/**
+ * One subtree to remove. The node must already exist and must not be the root.
+ */
+object lore_revision_tree_delete_entry_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("entry_id"),
+        ValueLayout.JAVA_INT.withName("node_id"),
+        MemoryLayout.paddingLayout(4),
+    ).withName("lore_revision_tree_delete_entry_t") as StructLayout
+
+    /**
+     * Caller-chosen id echoed back as `entry_id` on this entry's `DELETE_COMPLETE`
+     */
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
+    }
+
+    /**
+     * Root of the subtree to remove, including its transitive children
+     */
+    const val OFFSET_node_id: Long = 8L
+    fun node_id(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_node_id)
+    fun node_id(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_node_id, value)
     }
 }
 
@@ -13354,26 +14916,179 @@ object lore_revision_tree_loaded_event_data_t {
 }
 
 /**
- * Arguments for `lore_revision_tree_metadata_get`.
+ * Arguments for `lore_revision_tree_metadata_clear`.
  */
-object lore_revision_tree_metadata_get_args_t {
+object lore_revision_tree_metadata_clear_args_t {
     const val SIZE: Long = 32L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("batch_id"),
         lore_revision_tree_t.LAYOUT.withName("handle"),
+        lore_revision_tree_metadata_clear_entry_array_t.LAYOUT.withName("entries"),
+    ).withName("lore_revision_tree_metadata_clear_args_t") as StructLayout
+
+    /**
+     * Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE`
+     */
+    const val OFFSET_batch_id: Long = 0L
+    fun batch_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_batch_id)
+    fun batch_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_batch_id, value)
+    }
+
+    /**
+     * Loaded revision-tree handle to mutate
+     */
+    const val OFFSET_handle: Long = 8L
+    fun handle(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_handle, 8L)
+
+    /**
+     * Keys to remove; each emits its own `METADATA_CLEAR_COMPLETE`
+     */
+    const val OFFSET_entries: Long = 16L
+    fun entries(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_entries, 16L)
+}
+
+/**
+ * Terminal per-entry event for `metadata_clear`. `removed` says whether the key
+ * was there to begin with: clearing an absent key is a no-op success, so the
+ * error code alone cannot tell the two apart. The call as a whole reports
+ * separately on `RevisionTreeBatchComplete`.
+ */
+object lore_revision_tree_metadata_clear_complete_event_data_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("entry_id"),
+        ValueLayout.JAVA_BYTE.withName("removed"),
+        MemoryLayout.paddingLayout(3),
+        ValueLayout.JAVA_INT.withName("error_code"),
+    ).withName("lore_revision_tree_metadata_clear_complete_event_data_t") as StructLayout
+
+    /**
+     * Correlation id of the entry this reports, not of the call.
+     */
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
+    }
+
+    /**
+     * `1` when the key was present and has been removed, `0` when it was absent
+     * and the entry was a no-op.
+     */
+    const val OFFSET_removed: Long = 8L
+    fun removed(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_removed)
+    fun removed(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_removed, value)
+    }
+
+    /**
+     * The outcome of the call.
+     */
+    const val OFFSET_error_code: Long = 12L
+    fun error_code(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
+    fun error_code(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
+    }
+}
+
+/**
+ * A contiguous array of elements described by a pointer and a count.
+ * Holds zero or more values of the element type laid out one after another.
+ */
+object lore_revision_tree_metadata_clear_entry_array_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("count"),
+    ).withName("lore_revision_tree_metadata_clear_entry_array_t") as StructLayout
+
+    /**
+     * Pointer to the first element.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of elements in the array.
+     */
+    const val OFFSET_count: Long = 8L
+    fun count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
+    fun count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_count, value)
+    }
+}
+
+/**
+ * One metadata key to remove.
+ */
+object lore_revision_tree_metadata_clear_entry_t {
+    const val SIZE: Long = 24L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("entry_id"),
         lore_string_t.LAYOUT.withName("key"),
+    ).withName("lore_revision_tree_metadata_clear_entry_t") as StructLayout
+
+    /**
+     * Caller-chosen id echoed back as `entry_id` on this entry's `METADATA_CLEAR_COMPLETE`
+     */
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
+    }
+
+    /**
+     * Metadata key to remove; a key that is not set is a no-op
+     */
+    const val OFFSET_key: Long = 8L
+    fun key(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_key, 16L)
+}
+
+/**
+ * Arguments for `lore_revision_tree_metadata_get`.
+ */
+object lore_revision_tree_metadata_get_args_t {
+    const val SIZE: Long = 40L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("batch_id"),
+        lore_revision_tree_t.LAYOUT.withName("handle"),
+        ValueLayout.JAVA_BYTE.withName("include_revision"),
+        MemoryLayout.paddingLayout(7),
+        lore_revision_tree_metadata_get_entry_array_t.LAYOUT.withName("entries"),
     ).withName("lore_revision_tree_metadata_get_args_t") as StructLayout
 
     /**
-     * Per-call correlation id echoed back in events
+     * Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE`
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_batch_id: Long = 0L
+    fun batch_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_batch_id)
+    fun batch_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_batch_id, value)
     }
 
     /**
@@ -13384,27 +15099,35 @@ object lore_revision_tree_metadata_get_args_t {
         struct.asSlice(OFFSET_handle, 8L)
 
     /**
-     * Metadata key to read; pending edits take precedence over the revision
+     * `0` reads only the revision being built; `1` also falls back to the
+     * loaded revision for a key the handle has no entry for
      */
-    const val OFFSET_key: Long = 16L
-    fun key(struct: MemorySegment): MemorySegment =
-        struct.asSlice(OFFSET_key, 16L)
+    const val OFFSET_include_revision: Long = 16L
+    fun include_revision(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_include_revision)
+    fun include_revision(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_include_revision, value)
+    }
+
+    /**
+     * Keys to read; a key that resolves emits its own `METADATA_GET_COMPLETE`
+     */
+    const val OFFSET_entries: Long = 24L
+    fun entries(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_entries, 16L)
 }
 
 /**
- * Per-call event carrying a metadata value from `metadata_get`. The
+ * Per-entry event carrying a metadata value from `metadata_get`. The
  * missing-key case emits no value event and lets the trailing `Complete`
  * fire on its own.
- * 
- * No `Debug` derive: the embedded `LoreMetadata` enum does not implement
- * `Debug`. Use `serde_json::to_string` to render this for diagnostics.
  */
 object lore_revision_tree_metadata_get_complete_event_data_t {
     const val SIZE: Long = 88L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("entry_id"),
         lore_string_t.LAYOUT.withName("key"),
         lore_metadata_t.LAYOUT.withName("value"),
         ValueLayout.JAVA_INT.withName("error_code"),
@@ -13412,13 +15135,13 @@ object lore_revision_tree_metadata_get_complete_event_data_t {
     ).withName("lore_revision_tree_metadata_get_complete_event_data_t") as StructLayout
 
     /**
-     * Correlation id of the originating call.
+     * Correlation id of the entry this reports, not of the call.
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
     }
 
     /**
@@ -13447,29 +15170,90 @@ object lore_revision_tree_metadata_get_complete_event_data_t {
 }
 
 /**
- * Arguments for `lore_revision_tree_metadata_set`.
+ * A contiguous array of elements described by a pointer and a count.
+ * Holds zero or more values of the element type laid out one after another.
  */
-object lore_revision_tree_metadata_set_args_t {
-    const val SIZE: Long = 56L
+object lore_revision_tree_metadata_get_entry_array_t {
+    const val SIZE: Long = 16L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
-        lore_revision_tree_t.LAYOUT.withName("handle"),
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("count"),
+    ).withName("lore_revision_tree_metadata_get_entry_array_t") as StructLayout
+
+    /**
+     * Pointer to the first element.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of elements in the array.
+     */
+    const val OFFSET_count: Long = 8L
+    fun count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
+    fun count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_count, value)
+    }
+}
+
+/**
+ * One metadata key to read.
+ */
+object lore_revision_tree_metadata_get_entry_t {
+    const val SIZE: Long = 24L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("entry_id"),
         lore_string_t.LAYOUT.withName("key"),
-        lore_string_t.LAYOUT.withName("value"),
-        ValueLayout.JAVA_INT.withName("format"),
-        MemoryLayout.paddingLayout(4),
+    ).withName("lore_revision_tree_metadata_get_entry_t") as StructLayout
+
+    /**
+     * Caller-chosen id echoed back as `entry_id` on this entry's `METADATA_GET_COMPLETE`
+     */
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
+    }
+
+    /**
+     * Metadata key to read
+     */
+    const val OFFSET_key: Long = 8L
+    fun key(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_key, 16L)
+}
+
+/**
+ * Arguments for `lore_revision_tree_metadata_set`.
+ */
+object lore_revision_tree_metadata_set_args_t {
+    const val SIZE: Long = 32L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("batch_id"),
+        lore_revision_tree_t.LAYOUT.withName("handle"),
+        lore_revision_tree_metadata_set_entry_array_t.LAYOUT.withName("entries"),
     ).withName("lore_revision_tree_metadata_set_args_t") as StructLayout
 
     /**
-     * Per-call correlation id echoed back in events
+     * Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE`
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_batch_id: Long = 0L
+    fun batch_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_batch_id)
+    fun batch_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_batch_id, value)
     }
 
     /**
@@ -13480,51 +15264,35 @@ object lore_revision_tree_metadata_set_args_t {
         struct.asSlice(OFFSET_handle, 8L)
 
     /**
-     * Metadata key; re-setting it overwrites the pending value
+     * Pairs to record; each emits its own `METADATA_SET_COMPLETE`
      */
-    const val OFFSET_key: Long = 16L
-    fun key(struct: MemorySegment): MemorySegment =
-        struct.asSlice(OFFSET_key, 16L)
-
-    /**
-     * Value stored under the key
-     */
-    const val OFFSET_value: Long = 32L
-    fun value(struct: MemorySegment): MemorySegment =
-        struct.asSlice(OFFSET_value, 16L)
-
-    /**
-     * Value encoding, matching `LoreRevisionMetadataSetArgs::formats`
-     */
-    const val OFFSET_format: Long = 48L
-    fun format(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_format)
-    fun format(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_format, value)
-    }
+    const val OFFSET_entries: Long = 16L
+    fun entries(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_entries, 16L)
 }
 
 /**
- * Terminal per-call event for `metadata_set`.
+ * Terminal per-entry event for `metadata_set`. The call as a whole reports
+ * separately on `RevisionTreeBatchComplete`.
  */
 object lore_revision_tree_metadata_set_complete_event_data_t {
     const val SIZE: Long = 16L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("entry_id"),
         ValueLayout.JAVA_INT.withName("error_code"),
         MemoryLayout.paddingLayout(4),
     ).withName("lore_revision_tree_metadata_set_complete_event_data_t") as StructLayout
 
     /**
-     * Correlation id of the originating call.
+     * Correlation id of the entry this reports, not of the call.
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
     }
 
     /**
@@ -13539,30 +15307,99 @@ object lore_revision_tree_metadata_set_complete_event_data_t {
 }
 
 /**
- * Arguments for `lore_revision_tree_modify`.
+ * A contiguous array of elements described by a pointer and a count.
+ * Holds zero or more values of the element type laid out one after another.
  */
-object lore_revision_tree_modify_args_t {
+object lore_revision_tree_metadata_set_entry_array_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("count"),
+    ).withName("lore_revision_tree_metadata_set_entry_array_t") as StructLayout
+
+    /**
+     * Pointer to the first element.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of elements in the array.
+     */
+    const val OFFSET_count: Long = 8L
+    fun count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
+    fun count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_count, value)
+    }
+}
+
+/**
+ * One metadata pair to record. `value` is a typed value that carries its own
+ * kind, so there is no separate format tag and nothing to parse.
+ */
+object lore_revision_tree_metadata_set_entry_t {
     const val SIZE: Long = 80L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("entry_id"),
+        lore_string_t.LAYOUT.withName("key"),
+        lore_metadata_t.LAYOUT.withName("value"),
+    ).withName("lore_revision_tree_metadata_set_entry_t") as StructLayout
+
+    /**
+     * Caller-chosen id echoed back as `entry_id` on this entry's `METADATA_SET_COMPLETE`
+     */
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
+    }
+
+    /**
+     * Metadata key; a later entry naming it overwrites this one
+     */
+    const val OFFSET_key: Long = 8L
+    fun key(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_key, 16L)
+
+    /**
+     * Value to store, stored under the kind it carries
+     */
+    const val OFFSET_value: Long = 24L
+    fun value(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_value, 56L)
+}
+
+/**
+ * Arguments for `lore_revision_tree_modify`.
+ */
+object lore_revision_tree_modify_args_t {
+    const val SIZE: Long = 32L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("batch_id"),
         lore_revision_tree_t.LAYOUT.withName("handle"),
-        ValueLayout.JAVA_INT.withName("node_id"),
-        ValueLayout.JAVA_SHORT.withName("mode"),
-        MemoryLayout.paddingLayout(2),
-        ValueLayout.JAVA_LONG.withName("size"),
-        lore_address_t.LAYOUT.withName("address"),
+        lore_revision_tree_modify_entry_array_t.LAYOUT.withName("entries"),
     ).withName("lore_revision_tree_modify_args_t") as StructLayout
 
     /**
-     * Per-call correlation id echoed back in events
+     * Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE`
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_batch_id: Long = 0L
+    fun batch_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_batch_id)
+    fun batch_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_batch_id, value)
     }
 
     /**
@@ -13573,65 +15410,37 @@ object lore_revision_tree_modify_args_t {
         struct.asSlice(OFFSET_handle, 8L)
 
     /**
-     * Leaf node to update; non-leaf targets are rejected
+     * Nodes to rewrite; each emits its own `MODIFY_COMPLETE`
      */
-    const val OFFSET_node_id: Long = 16L
-    fun node_id(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_node_id)
-    fun node_id(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_node_id, value)
-    }
-
-    /**
-     * New POSIX permission bits
-     */
-    const val OFFSET_mode: Long = 20L
-    fun mode(struct: MemorySegment): Short =
-        struct.get(ValueLayout.JAVA_SHORT, OFFSET_mode)
-    fun mode(struct: MemorySegment, value: Short) {
-        struct.set(ValueLayout.JAVA_SHORT, OFFSET_mode, value)
-    }
-
-    /**
-     * New content size in bytes
-     */
-    const val OFFSET_size: Long = 24L
-    fun size(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_size)
-    fun size(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_size, value)
-    }
-
-    /**
-     * New content address; the existing `file_id` context is preserved
-     */
-    const val OFFSET_address: Long = 32L
-    fun address(struct: MemorySegment): MemorySegment =
-        struct.asSlice(OFFSET_address, 48L)
+    const val OFFSET_entries: Long = 16L
+    fun entries(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_entries, 16L)
 }
 
 /**
- * Terminal per-call event for `modify`. `node_id` echoes the modified
- * node so the caller can chain operations without re-resolving.
+ * Terminal per-entry event for `modify`. On success `node_id` echoes the
+ * rewritten node so the caller can chain operations without re-resolving; on
+ * failure it is the invalid-node sentinel, since nothing was rewritten. The
+ * call as a whole reports separately on `RevisionTreeBatchComplete`.
  */
 object lore_revision_tree_modify_complete_event_data_t {
     const val SIZE: Long = 16L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("entry_id"),
         ValueLayout.JAVA_INT.withName("node_id"),
         ValueLayout.JAVA_INT.withName("error_code"),
     ).withName("lore_revision_tree_modify_complete_event_data_t") as StructLayout
 
     /**
-     * Correlation id of the originating call.
+     * Correlation id of the entry this reports, not of the call.
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
     }
 
     /**
@@ -13656,28 +15465,124 @@ object lore_revision_tree_modify_complete_event_data_t {
 }
 
 /**
- * Arguments for `lore_revision_tree_move`.
+ * A contiguous array of elements described by a pointer and a count.
+ * Holds zero or more values of the element type laid out one after another.
  */
-object lore_revision_tree_move_args_t {
-    const val SIZE: Long = 40L
+object lore_revision_tree_modify_entry_array_t {
+    const val SIZE: Long = 16L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
-        lore_revision_tree_t.LAYOUT.withName("handle"),
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("count"),
+    ).withName("lore_revision_tree_modify_entry_array_t") as StructLayout
+
+    /**
+     * Pointer to the first element.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of elements in the array.
+     */
+    const val OFFSET_count: Long = 8L
+    fun count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
+    fun count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_count, value)
+    }
+}
+
+/**
+ * One node to rewrite. The node must already exist and be a file.
+ */
+object lore_revision_tree_modify_entry_t {
+    const val SIZE: Long = 72L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("entry_id"),
         ValueLayout.JAVA_INT.withName("node_id"),
-        ValueLayout.JAVA_INT.withName("destination_parent_id"),
-        lore_string_t.LAYOUT.withName("dst_name"),
+        ValueLayout.JAVA_SHORT.withName("mode"),
+        MemoryLayout.paddingLayout(2),
+        ValueLayout.JAVA_LONG.withName("size"),
+        lore_address_t.LAYOUT.withName("address"),
+    ).withName("lore_revision_tree_modify_entry_t") as StructLayout
+
+    /**
+     * Caller-chosen id echoed back as `entry_id` on this entry's `MODIFY_COMPLETE`
+     */
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
+    }
+
+    /**
+     * Leaf node to rewrite; non-leaf targets are rejected
+     */
+    const val OFFSET_node_id: Long = 8L
+    fun node_id(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_node_id)
+    fun node_id(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_node_id, value)
+    }
+
+    /**
+     * New POSIX permission bits
+     */
+    const val OFFSET_mode: Long = 12L
+    fun mode(struct: MemorySegment): Short =
+        struct.get(ValueLayout.JAVA_SHORT, OFFSET_mode)
+    fun mode(struct: MemorySegment, value: Short) {
+        struct.set(ValueLayout.JAVA_SHORT, OFFSET_mode, value)
+    }
+
+    /**
+     * New content size in bytes
+     */
+    const val OFFSET_size: Long = 16L
+    fun size(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_size)
+    fun size(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_size, value)
+    }
+
+    /**
+     * New content address; a zero `context` preserves the node's file id
+     */
+    const val OFFSET_address: Long = 24L
+    fun address(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_address, 48L)
+}
+
+/**
+ * Arguments for `lore_revision_tree_move`.
+ */
+object lore_revision_tree_move_args_t {
+    const val SIZE: Long = 32L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("batch_id"),
+        lore_revision_tree_t.LAYOUT.withName("handle"),
+        lore_revision_tree_move_entry_array_t.LAYOUT.withName("entries"),
     ).withName("lore_revision_tree_move_args_t") as StructLayout
 
     /**
-     * Per-call correlation id echoed back in events
+     * Caller-chosen id echoed back as `batch_id` on `BATCH_COMPLETE`
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_batch_id: Long = 0L
+    fun batch_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_batch_id)
+    fun batch_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_batch_id, value)
     }
 
     /**
@@ -13688,55 +15593,36 @@ object lore_revision_tree_move_args_t {
         struct.asSlice(OFFSET_handle, 8L)
 
     /**
-     * Node to move; its `file_id` is preserved across the move
+     * Nodes to move; each emits its own `MOVE_COMPLETE`
      */
-    const val OFFSET_node_id: Long = 16L
-    fun node_id(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_node_id)
-    fun node_id(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_node_id, value)
-    }
-
-    /**
-     * Parent node the moved node is reparented under
-     */
-    const val OFFSET_destination_parent_id: Long = 20L
-    fun destination_parent_id(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_destination_parent_id)
-    fun destination_parent_id(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_destination_parent_id, value)
-    }
-
-    /**
-     * UTF-8 name the moved node takes at the destination
-     */
-    const val OFFSET_dst_name: Long = 24L
-    fun dst_name(struct: MemorySegment): MemorySegment =
-        struct.asSlice(OFFSET_dst_name, 16L)
+    const val OFFSET_entries: Long = 16L
+    fun entries(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_entries, 16L)
 }
 
 /**
- * Terminal per-call event for `move`. `node_id` echoes the moved node so
- * the caller observes that `file_id` is preserved across the reparent.
+ * Terminal per-entry event for `move`. `node_id` echoes the moved node so
+ * the caller observes that `file_id` is preserved across the reparent. The
+ * call as a whole reports separately on `RevisionTreeBatchComplete`.
  */
 object lore_revision_tree_move_complete_event_data_t {
     const val SIZE: Long = 16L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_LONG.withName("id"),
+        ValueLayout.JAVA_LONG.withName("entry_id"),
         ValueLayout.JAVA_INT.withName("node_id"),
         ValueLayout.JAVA_INT.withName("error_code"),
     ).withName("lore_revision_tree_move_complete_event_data_t") as StructLayout
 
     /**
-     * Correlation id of the originating call.
+     * Correlation id of the entry this reports, not of the call.
      */
-    const val OFFSET_id: Long = 0L
-    fun id(struct: MemorySegment): Long =
-        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
-    fun id(struct: MemorySegment, value: Long) {
-        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
     }
 
     /**
@@ -13758,6 +15644,92 @@ object lore_revision_tree_move_complete_event_data_t {
     fun error_code(struct: MemorySegment, value: Int) {
         struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
     }
+}
+
+/**
+ * A contiguous array of elements described by a pointer and a count.
+ * Holds zero or more values of the element type laid out one after another.
+ */
+object lore_revision_tree_move_entry_array_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("count"),
+    ).withName("lore_revision_tree_move_entry_array_t") as StructLayout
+
+    /**
+     * Pointer to the first element.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of elements in the array.
+     */
+    const val OFFSET_count: Long = 8L
+    fun count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
+    fun count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_count, value)
+    }
+}
+
+/**
+ * One node to move. The node must already exist and must not be the root.
+ */
+object lore_revision_tree_move_entry_t {
+    const val SIZE: Long = 32L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("entry_id"),
+        ValueLayout.JAVA_INT.withName("node_id"),
+        ValueLayout.JAVA_INT.withName("destination_parent_id"),
+        lore_string_t.LAYOUT.withName("dst_name"),
+    ).withName("lore_revision_tree_move_entry_t") as StructLayout
+
+    /**
+     * Caller-chosen id echoed back as `entry_id` on this entry's `MOVE_COMPLETE`
+     */
+    const val OFFSET_entry_id: Long = 0L
+    fun entry_id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_entry_id)
+    fun entry_id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_entry_id, value)
+    }
+
+    /**
+     * Node to move; its `file_id` is preserved across the move
+     */
+    const val OFFSET_node_id: Long = 8L
+    fun node_id(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_node_id)
+    fun node_id(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_node_id, value)
+    }
+
+    /**
+     * Parent node the moved node is reparented under; its current parent renames it
+     */
+    const val OFFSET_destination_parent_id: Long = 12L
+    fun destination_parent_id(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_destination_parent_id)
+    fun destination_parent_id(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_destination_parent_id, value)
+    }
+
+    /**
+     * UTF-8 name the moved node takes at the destination
+     */
+    const val OFFSET_dst_name: Long = 16L
+    fun dst_name(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_dst_name, 16L)
 }
 
 /**
@@ -13825,8 +15797,9 @@ object lore_revision_tree_node_info_event_data_t {
         lore_string_t.LAYOUT.withName("name"),
         ValueLayout.JAVA_INT.withName("parent_id"),
         ValueLayout.JAVA_INT.withName("kind"),
+        ValueLayout.JAVA_INT.withName("staged_action"),
         ValueLayout.JAVA_SHORT.withName("mode"),
-        MemoryLayout.paddingLayout(6),
+        MemoryLayout.paddingLayout(2),
         ValueLayout.JAVA_LONG.withName("size"),
         lore_address_t.LAYOUT.withName("address"),
         lore_context_t.LAYOUT.withName("file_id"),
@@ -13896,9 +15869,20 @@ object lore_revision_tree_node_info_event_data_t {
     }
 
     /**
+     * The change staged on the node, as a `LoreNodeStagedAction`. A node
+     * staged for deletion still reports, carrying the deletion here.
+     */
+    const val OFFSET_staged_action: Long = 88L
+    fun staged_action(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_staged_action)
+    fun staged_action(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_staged_action, value)
+    }
+
+    /**
      * The file mode bits.
      */
-    const val OFFSET_mode: Long = 88L
+    const val OFFSET_mode: Long = 92L
     fun mode(struct: MemorySegment): Short =
         struct.get(ValueLayout.JAVA_SHORT, OFFSET_mode)
     fun mode(struct: MemorySegment, value: Short) {
@@ -14171,7 +16155,81 @@ object lore_revision_tree_t {
 }
 
 /**
- * Arguments for starting the Lore service process for the current repository (no parameters).
+ * Data for a service log message captured outside command execution.
+ */
+object lore_service_message_event_data_t {
+    const val SIZE: Long = 24L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_INT.withName("level"),
+        MemoryLayout.paddingLayout(4),
+        lore_string_t.LAYOUT.withName("message"),
+    ).withName("lore_service_message_event_data_t") as StructLayout
+
+    /**
+     * The severity level of the log message.
+     */
+    const val OFFSET_level: Long = 0L
+    fun level(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_level)
+    fun level(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_level, value)
+    }
+
+    /**
+     * The log message text.
+     */
+    const val OFFSET_message: Long = 8L
+    fun message(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_message, 16L)
+}
+
+/**
+ * Arguments for naming the executable the Lore service runs from.
+ */
+object lore_service_set_executable_args_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_string_t.LAYOUT.withName("executable"),
+    ).withName("lore_service_set_executable_args_t") as StructLayout
+
+    /**
+     * Path of the executable to start as the service. Empty clears the setting,
+     * which prevents auto-starting the service but can still can connect to an
+     * already running service.
+     */
+    const val OFFSET_executable: Long = 0L
+    fun executable(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_executable, 16L)
+}
+
+/**
+ * Arguments for setting whether commands are carried out by the Lore service.
+ */
+object lore_service_set_use_automatically_args_t {
+    const val SIZE: Long = 1L
+    const val ALIGNMENT: Long = 1L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_BYTE.withName("enabled"),
+    ).withName("lore_service_set_use_automatically_args_t") as StructLayout
+
+    /**
+     * Carry out commands in the service rather than in the process that was run
+     */
+    const val OFFSET_enabled: Long = 0L
+    fun enabled(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_enabled)
+    fun enabled(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_enabled, value)
+    }
+}
+
+/**
+ * Arguments for starting the Lore service process (no parameters).
  */
 object lore_service_start_args_t {
     const val SIZE: Long = 4L
@@ -14190,24 +16248,105 @@ object lore_service_start_args_t {
 }
 
 /**
- * Arguments for stopping the Lore service process for the current or all repositories.
+ * Arguments for querying the Lore service status (no parameters).
  */
-object lore_service_stop_args_t {
-    const val SIZE: Long = 1L
-    const val ALIGNMENT: Long = 1L
+object lore_service_status_args_t {
+    const val SIZE: Long = 4L
+    const val ALIGNMENT: Long = 4L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
-        ValueLayout.JAVA_BYTE.withName("all"),
-    ).withName("lore_service_stop_args_t") as StructLayout
+        ValueLayout.JAVA_INT.withName("_unused"),
+    ).withName("lore_service_status_args_t") as StructLayout
+
+    const val OFFSET__unused: Long = 0L
+    fun _unused(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET__unused)
+    fun _unused(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET__unused, value)
+    }
+}
+
+/**
+ * Data for the service status event, reporting whether the service is running
+ * and its current metadata.
+ */
+object lore_service_status_event_data_t {
+    const val SIZE: Long = 40L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_BYTE.withName("running"),
+        MemoryLayout.paddingLayout(7),
+        lore_string_t.LAYOUT.withName("binary_path"),
+        ValueLayout.JAVA_LONG.withName("uptime_ms"),
+        ValueLayout.JAVA_INT.withName("connection_count"),
+        ValueLayout.JAVA_INT.withName("swfs_mount_count"),
+    ).withName("lore_service_status_event_data_t") as StructLayout
 
     /**
-     * Stop all repositories rather than just the current one
+     * Whether the service is running: 1 for running, 0 for not running.
      */
-    const val OFFSET_all: Long = 0L
-    fun all(struct: MemorySegment): Byte =
-        struct.get(ValueLayout.JAVA_BYTE, OFFSET_all)
-    fun all(struct: MemorySegment, value: Byte) {
-        struct.set(ValueLayout.JAVA_BYTE, OFFSET_all, value)
+    const val OFFSET_running: Long = 0L
+    fun running(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_running)
+    fun running(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_running, value)
+    }
+
+    /**
+     * Path to the service binary.
+     */
+    const val OFFSET_binary_path: Long = 8L
+    fun binary_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_binary_path, 16L)
+
+    /**
+     * Milliseconds since the service started.
+     */
+    const val OFFSET_uptime_ms: Long = 24L
+    fun uptime_ms(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_uptime_ms)
+    fun uptime_ms(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_uptime_ms, value)
+    }
+
+    /**
+     * Number of active client connections.
+     */
+    const val OFFSET_connection_count: Long = 32L
+    fun connection_count(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_connection_count)
+    fun connection_count(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_connection_count, value)
+    }
+
+    /**
+     * Number of SWFS mounts currently active.
+     */
+    const val OFFSET_swfs_mount_count: Long = 36L
+    fun swfs_mount_count(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_swfs_mount_count)
+    fun swfs_mount_count(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_swfs_mount_count, value)
+    }
+}
+
+/**
+ * Arguments for stopping the Lore service process.
+ */
+object lore_service_stop_args_t {
+    const val SIZE: Long = 4L
+    const val ALIGNMENT: Long = 4L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_INT.withName("_unused"),
+    ).withName("lore_service_stop_args_t") as StructLayout
+
+    const val OFFSET__unused: Long = 0L
+    fun _unused(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET__unused)
+    fun _unused(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET__unused, value)
     }
 }
 
@@ -14336,6 +16475,124 @@ object lore_shared_store_info_event_data_t {
 }
 
 /**
+ * Arguments for listing the registry of shared stores.
+ */
+object lore_shared_store_list_args_t {
+    const val SIZE: Long = 1L
+    const val ALIGNMENT: Long = 1L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_BYTE.withName("include_instances"),
+    ).withName("lore_shared_store_list_args_t") as StructLayout
+
+    /**
+     * Whether to load each shared store to search for each instance using it.
+     */
+    const val OFFSET_include_instances: Long = 0L
+    fun include_instances(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_include_instances)
+    fun include_instances(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_include_instances, value)
+    }
+}
+
+/**
+ * Data for an event describing all shared stores.
+ */
+object lore_shared_store_list_event_data_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_shared_store_list_item_array_t.LAYOUT.withName("stores"),
+    ).withName("lore_shared_store_list_event_data_t") as StructLayout
+
+    /**
+     * All stores from the registry.
+     */
+    const val OFFSET_stores: Long = 0L
+    fun stores(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_stores, 16L)
+}
+
+/**
+ * A contiguous array of elements described by a pointer and a count.
+ * Holds zero or more values of the element type laid out one after another.
+ */
+object lore_shared_store_list_item_array_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("count"),
+    ).withName("lore_shared_store_list_item_array_t") as StructLayout
+
+    /**
+     * Pointer to the first element.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of elements in the array.
+     */
+    const val OFFSET_count: Long = 8L
+    fun count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
+    fun count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_count, value)
+    }
+}
+
+/**
+ * Shared store array list item.
+ */
+object lore_shared_store_list_item_t {
+    const val SIZE: Long = 64L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_string_t.LAYOUT.withName("remote_url"),
+        lore_string_t.LAYOUT.withName("store_path"),
+        lore_string_array_t.LAYOUT.withName("instance_paths"),
+        lore_instance_id_array_t.LAYOUT.withName("instance_ids"),
+    ).withName("lore_shared_store_list_item_t") as StructLayout
+
+    /**
+     * Remote URL the shared store is for.
+     */
+    const val OFFSET_remote_url: Long = 0L
+    fun remote_url(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_remote_url, 16L)
+
+    /**
+     * Path to the shared store on disk.
+     */
+    const val OFFSET_store_path: Long = 16L
+    fun store_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_store_path, 16L)
+
+    /**
+     * Paths to instances using the shared store
+     */
+    const val OFFSET_instance_paths: Long = 32L
+    fun instance_paths(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_instance_paths, 16L)
+
+    /**
+     * Ids of instances using the shared store
+     */
+    const val OFFSET_instance_ids: Long = 48L
+    fun instance_ids(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_instance_ids, 16L)
+}
+
+/**
  * Arguments for setting whether to automatically use the shared store.
  */
 object lore_shared_store_set_use_automatically_args_t {
@@ -14445,7 +16702,7 @@ object lore_storage_copy_item_array_t {
  * source_address.hash, target_context)`.
  */
 object lore_storage_copy_item_complete_event_data_t {
-    const val SIZE: Long = 112L
+    const val SIZE: Long = 144L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -14454,8 +16711,7 @@ object lore_storage_copy_item_complete_event_data_t {
         lore_partition_t.LAYOUT.withName("target_partition"),
         lore_address_t.LAYOUT.withName("source_address"),
         lore_context_t.LAYOUT.withName("target_context"),
-        ValueLayout.JAVA_INT.withName("error_code"),
-        MemoryLayout.paddingLayout(4),
+        lore_error_detail_t.LAYOUT.withName("error"),
     ).withName("lore_storage_copy_item_complete_event_data_t") as StructLayout
 
     /**
@@ -14499,12 +16755,9 @@ object lore_storage_copy_item_complete_event_data_t {
     /**
      * The outcome for the item.
      */
-    const val OFFSET_error_code: Long = 104L
-    fun error_code(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
-    fun error_code(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
-    }
+    const val OFFSET_error: Long = 104L
+    fun error(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_error, 40L)
 }
 
 /**
@@ -14726,7 +16979,7 @@ object lore_storage_get_file_item_array_t {
  * write it to the file at `path`.
  */
 object lore_storage_get_file_item_t {
-    const val SIZE: Long = 96L
+    const val SIZE: Long = 112L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -14734,6 +16987,8 @@ object lore_storage_get_file_item_t {
         lore_partition_t.LAYOUT.withName("partition"),
         lore_address_t.LAYOUT.withName("address"),
         lore_string_t.LAYOUT.withName("path"),
+        ValueLayout.JAVA_LONG.withName("offset"),
+        ValueLayout.JAVA_LONG.withName("length"),
         ValueLayout.JAVA_BYTE.withName("local_cache"),
         MemoryLayout.paddingLayout(7),
     ).withName("lore_storage_get_file_item_t") as StructLayout
@@ -14771,14 +17026,253 @@ object lore_storage_get_file_item_t {
         struct.asSlice(OFFSET_path, 16L)
 
     /**
+     * First content byte to write, counted from the start of the decompressed content.
+     * Past the end of the content rejects with `INVALID_ARGUMENTS`
+     */
+    const val OFFSET_offset: Long = 88L
+    fun offset(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_offset)
+    fun offset(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_offset, value)
+    }
+
+    /**
+     * Content bytes to write from `offset`; `0` writes to the end. The file holds exactly the
+     * requested range starting at its own first byte, and is sized to it
+     */
+    const val OFFSET_length: Long = 96L
+    fun length(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_length)
+    fun length(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_length, value)
+    }
+
+    /**
      * Cache fetched fragments back to the local store, not just write them to `path`
      */
-    const val OFFSET_local_cache: Long = 88L
+    const val OFFSET_local_cache: Long = 104L
     fun local_cache(struct: MemorySegment): Byte =
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_local_cache)
     fun local_cache(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_local_cache, value)
     }
+}
+
+/**
+ * Arguments for `lore_storage_get_file_resolved`.
+ */
+object lore_storage_get_file_resolved_args_t {
+    const val SIZE: Long = 24L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_store_t.LAYOUT.withName("handle"),
+        lore_storage_get_file_resolved_item_array_t.LAYOUT.withName("items"),
+    ).withName("lore_storage_get_file_resolved_args_t") as StructLayout
+
+    /**
+     * Open storage handle
+     */
+    const val OFFSET_handle: Long = 0L
+    fun handle(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_handle, 8L)
+
+    /**
+     * Keys to resolve and destination paths; each runs independently and emits its own
+     * `GET_ITEM_COMPLETE`
+     */
+    const val OFFSET_items: Long = 8L
+    fun items(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_items, 16L)
+}
+
+/**
+ * A contiguous array of elements described by a pointer and a count.
+ * Holds zero or more values of the element type laid out one after another.
+ */
+object lore_storage_get_file_resolved_item_array_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("count"),
+    ).withName("lore_storage_get_file_resolved_item_array_t") as StructLayout
+
+    /**
+     * Pointer to the first element.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of elements in the array.
+     */
+    const val OFFSET_count: Long = 8L
+    fun count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
+    fun count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_count, value)
+    }
+}
+
+/**
+ * One `get_file_resolved` item — the mutable key to resolve and the file to write the content it
+ * names to.
+ */
+object lore_storage_get_file_resolved_item_t {
+    const val SIZE: Long = 112L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("id"),
+        lore_partition_t.LAYOUT.withName("partition"),
+        lore_hash_t.LAYOUT.withName("key"),
+        lore_context_t.LAYOUT.withName("context"),
+        lore_string_t.LAYOUT.withName("path"),
+        ValueLayout.JAVA_LONG.withName("offset"),
+        ValueLayout.JAVA_LONG.withName("length"),
+        ValueLayout.JAVA_BYTE.withName("local_cache"),
+        MemoryLayout.paddingLayout(7),
+    ).withName("lore_storage_get_file_resolved_item_t") as StructLayout
+
+    /**
+     * Caller-chosen id echoed back in `GET_ITEM_COMPLETE`
+     */
+    const val OFFSET_id: Long = 0L
+    fun id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
+    fun id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    }
+
+    /**
+     * Partition to resolve and read within; the zero/default partition rejects with
+     * `INVALID_ARGUMENTS`
+     */
+    const val OFFSET_partition: Long = 8L
+    fun partition(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_partition, 16L)
+
+    /**
+     * Mutable key to resolve, always read as `KeyType::Resolve`; a zero key rejects with
+     * `INVALID_ARGUMENTS`
+     */
+    const val OFFSET_key: Long = 24L
+    fun key(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_key, 32L)
+
+    /**
+     * Paired with the resolved hash to address the immutable read; the mutable store yields only
+     * a hash
+     */
+    const val OFFSET_context: Long = 56L
+    fun context(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_context, 16L)
+
+    /**
+     * Destination path; empty rejects with `INVALID_ARGUMENTS`. Multi-fragment writes stage via
+     * `<path>.loretmp` then atomically rename
+     */
+    const val OFFSET_path: Long = 72L
+    fun path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_path, 16L)
+
+    /**
+     * First content byte to write, counted from the start of the decompressed content. Past the
+     * end of the content rejects with `INVALID_ARGUMENTS`
+     */
+    const val OFFSET_offset: Long = 88L
+    fun offset(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_offset)
+    fun offset(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_offset, value)
+    }
+
+    /**
+     * Content bytes to write from `offset`; `0` writes to the end. The file holds exactly the
+     * requested range starting at its own first byte, and is sized to it
+     */
+    const val OFFSET_length: Long = 96L
+    fun length(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_length)
+    fun length(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_length, value)
+    }
+
+    /**
+     * Cache fetched fragments and the mapping back to the local store, not just write the content
+     * to `path`
+     */
+    const val OFFSET_local_cache: Long = 104L
+    fun local_cache(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_local_cache)
+    fun local_cache(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_local_cache, value)
+    }
+}
+
+/**
+ * Per-leaf event for `get_resolved` with `fragments` set: one leaf fragment of the
+ * item's content and its payload. The `bytes` view is valid only during the callback invocation.
+ */
+object lore_storage_get_fragment_event_data_t {
+    const val SIZE: Long = 96L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("id"),
+        lore_address_t.LAYOUT.withName("address"),
+        ValueLayout.JAVA_LONG.withName("offset"),
+        lore_fragment_t.LAYOUT.withName("fragment"),
+        lore_bytes_t.LAYOUT.withName("bytes"),
+    ).withName("lore_storage_get_fragment_event_data_t") as StructLayout
+
+    /**
+     * Correlation id of the item.
+     */
+    const val OFFSET_id: Long = 0L
+    fun id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
+    fun id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    }
+
+    /**
+     * The content address of the item.
+     */
+    const val OFFSET_address: Long = 8L
+    fun address(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_address, 48L)
+
+    /**
+     * The byte offset of this leaf within the item's content.
+     */
+    const val OFFSET_offset: Long = 56L
+    fun offset(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_offset)
+    fun offset(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_offset, value)
+    }
+
+    /**
+     * The leaf's fragment, describing `bytes`: the compression among its flags, the payload size
+     * and the content size the payload expands to.
+     */
+    const val OFFSET_fragment: Long = 64L
+    fun fragment(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_fragment, 16L)
+
+    /**
+     * The leaf's payload, compressed as `fragment` states.
+     */
+    const val OFFSET_bytes: Long = 80L
+    fun bytes(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_bytes, 16L)
 }
 
 /**
@@ -14858,19 +17352,20 @@ object lore_storage_get_item_array_t {
 }
 
 /**
- * Terminal per-item event for `get` and `get_file`. For `get_file` this
- * is emitted without any preceding `HEADER`/`DATA` events — the payload
- * is written directly to the filesystem.
+ * Terminal per-item event for `get`, `get_file`, `get_resolved` and
+ * `get_file_resolved`. For the two file variants this is emitted without any
+ * preceding `HEADER`/`DATA` events — the payload is written directly to the
+ * filesystem. For the two resolved variants `address` is the address the key
+ * resolved to, so it is an output rather than an echo of the request.
  */
 object lore_storage_get_item_complete_event_data_t {
-    const val SIZE: Long = 64L
+    const val SIZE: Long = 96L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         ValueLayout.JAVA_LONG.withName("id"),
         lore_address_t.LAYOUT.withName("address"),
-        ValueLayout.JAVA_INT.withName("error_code"),
-        MemoryLayout.paddingLayout(4),
+        lore_error_detail_t.LAYOUT.withName("error"),
     ).withName("lore_storage_get_item_complete_event_data_t") as StructLayout
 
     /**
@@ -14893,28 +17388,28 @@ object lore_storage_get_item_complete_event_data_t {
     /**
      * The outcome for the item.
      */
-    const val OFFSET_error_code: Long = 56L
-    fun error_code(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
-    fun error_code(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
-    }
+    const val OFFSET_error: Long = 56L
+    fun error(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_error, 40L)
 }
 
 /**
- * One get item — the `(partition, address)` to read.
+ * One get item — the `(partition, address)` to read, and the range of it to read.
  */
 object lore_storage_get_item_t {
-    const val SIZE: Long = 80L
+    const val SIZE: Long = 112L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         ValueLayout.JAVA_LONG.withName("id"),
         lore_partition_t.LAYOUT.withName("partition"),
         lore_address_t.LAYOUT.withName("address"),
+        ValueLayout.JAVA_LONG.withName("offset"),
+        ValueLayout.JAVA_LONG.withName("length"),
         ValueLayout.JAVA_BYTE.withName("streaming"),
         ValueLayout.JAVA_BYTE.withName("local_cache"),
         MemoryLayout.paddingLayout(6),
+        lore_bytes_mut_t.LAYOUT.withName("data_out"),
     ).withName("lore_storage_get_item_t") as StructLayout
 
     /**
@@ -14942,9 +17437,33 @@ object lore_storage_get_item_t {
         struct.asSlice(OFFSET_address, 48L)
 
     /**
-     * Stream one `GET_DATA` per leaf fragment instead of a single reassembled buffer
+     * First content byte to read, counted from the start of the decompressed content.
+     * Past the end of the content rejects with `INVALID_ARGUMENTS`
      */
-    const val OFFSET_streaming: Long = 72L
+    const val OFFSET_offset: Long = 72L
+    fun offset(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_offset)
+    fun offset(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_offset, value)
+    }
+
+    /**
+     * Content bytes to read from `offset`; `0` reads to the end. A range reaching past the
+     * end is clamped to it, so `GET_DATA` may carry fewer bytes than asked for
+     */
+    const val OFFSET_length: Long = 80L
+    fun length(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_length)
+    fun length(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_length, value)
+    }
+
+    /**
+     * Stream one `GET_DATA` per leaf fragment instead of a single reassembled buffer. A read
+     * that fails partway reports the failure on `GET_ITEM_COMPLETE` rather than ending short
+     * with a success code
+     */
+    const val OFFSET_streaming: Long = 88L
     fun streaming(struct: MemorySegment): Byte =
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_streaming)
     fun streaming(struct: MemorySegment, value: Byte) {
@@ -14955,12 +17474,25 @@ object lore_storage_get_item_t {
      * Cache fetched bytes back to the local store even without the producer's
      * `PayloadLocalCachePriority` hint
      */
-    const val OFFSET_local_cache: Long = 73L
+    const val OFFSET_local_cache: Long = 89L
     fun local_cache(struct: MemorySegment): Byte =
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_local_cache)
     fun local_cache(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_local_cache, value)
     }
+
+    /**
+     * Writable buffer receiving the requested range, `len` stating its capacity. Zero-initialized
+     * selects `GET_DATA` delivery.
+     * 
+     * The capacity is the limit: a range exceeding it fails the item with
+     * `Oversized` rather than truncating. `GET_HEADER` reports the whole
+     * content's size, which with `offset` and `length` gives the bytes written; no `GET_DATA`
+     * follows, and `streaming` is ignored. The buffer holds unspecified bytes when the item fails.
+     */
+    const val OFFSET_data_out: Long = 96L
+    fun data_out(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_data_out, 16L)
 }
 
 /**
@@ -15025,22 +17557,20 @@ object lore_storage_get_metadata_item_array_t {
 }
 
 /**
- * Terminal per-item event for `get_metadata`. On success `fragment` is
- * valid and `error_code == None`; on miss `error_code == ADDRESS_NOT_FOUND`.
- * Mirrors `LoreStorageGetItemCompleteEventData`'s shape minus the absence of
- * any preceding `GET_HEADER` / `GET_DATA` events — `get_metadata` carries no
- * payload bytes.
+ * Terminal per-item event for `get_metadata`. On success `fragment` is valid and
+ * `error.error_code == 0`; on miss `error` carries the address-not-found error. Mirrors
+ * `LoreStorageGetItemCompleteEventData`'s shape minus the absence of any preceding
+ * `GET_HEADER` / `GET_DATA` events — `get_metadata` carries no payload bytes.
  */
 object lore_storage_get_metadata_item_complete_event_data_t {
-    const val SIZE: Long = 80L
+    const val SIZE: Long = 112L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         ValueLayout.JAVA_LONG.withName("id"),
         lore_address_t.LAYOUT.withName("address"),
         lore_fragment_t.LAYOUT.withName("fragment"),
-        ValueLayout.JAVA_INT.withName("error_code"),
-        MemoryLayout.paddingLayout(4),
+        lore_error_detail_t.LAYOUT.withName("error"),
     ).withName("lore_storage_get_metadata_item_complete_event_data_t") as StructLayout
 
     /**
@@ -15070,12 +17600,9 @@ object lore_storage_get_metadata_item_complete_event_data_t {
     /**
      * The outcome for the item.
      */
-    const val OFFSET_error_code: Long = 72L
-    fun error_code(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
-    fun error_code(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
-    }
+    const val OFFSET_error: Long = 72L
+    fun error(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_error, 40L)
 }
 
 /**
@@ -15114,6 +17641,171 @@ object lore_storage_get_metadata_item_t {
     const val OFFSET_address: Long = 24L
     fun address(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_address, 48L)
+}
+
+/**
+ * Arguments for `lore_storage_get_resolved`.
+ */
+object lore_storage_get_resolved_args_t {
+    const val SIZE: Long = 24L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_store_t.LAYOUT.withName("handle"),
+        lore_storage_get_resolved_item_array_t.LAYOUT.withName("items"),
+    ).withName("lore_storage_get_resolved_args_t") as StructLayout
+
+    /**
+     * Open storage handle
+     */
+    const val OFFSET_handle: Long = 0L
+    fun handle(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_handle, 8L)
+
+    /**
+     * Keys to resolve and read; each runs independently and emits its own event sequence
+     */
+    const val OFFSET_items: Long = 8L
+    fun items(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_items, 16L)
+}
+
+/**
+ * A contiguous array of elements described by a pointer and a count.
+ * Holds zero or more values of the element type laid out one after another.
+ */
+object lore_storage_get_resolved_item_array_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("count"),
+    ).withName("lore_storage_get_resolved_item_array_t") as StructLayout
+
+    /**
+     * Pointer to the first element.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of elements in the array.
+     */
+    const val OFFSET_count: Long = 8L
+    fun count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
+    fun count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_count, value)
+    }
+}
+
+/**
+ * One get-resolved item — the mutable key to resolve and the context to read it in.
+ */
+object lore_storage_get_resolved_item_t {
+    const val SIZE: Long = 96L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("id"),
+        lore_partition_t.LAYOUT.withName("partition"),
+        lore_hash_t.LAYOUT.withName("key"),
+        lore_context_t.LAYOUT.withName("context"),
+        ValueLayout.JAVA_BYTE.withName("streaming"),
+        ValueLayout.JAVA_BYTE.withName("local_cache"),
+        ValueLayout.JAVA_BYTE.withName("fragments"),
+        MemoryLayout.paddingLayout(5),
+        lore_bytes_mut_t.LAYOUT.withName("data_out"),
+    ).withName("lore_storage_get_resolved_item_t") as StructLayout
+
+    /**
+     * Caller-chosen id echoed back in every event for this item
+     */
+    const val OFFSET_id: Long = 0L
+    fun id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
+    fun id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    }
+
+    /**
+     * Partition to resolve and read within; the zero/default partition rejects with
+     * `INVALID_ARGUMENTS`
+     */
+    const val OFFSET_partition: Long = 8L
+    fun partition(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_partition, 16L)
+
+    /**
+     * Mutable key to resolve, always read as `KeyType::Resolve`
+     */
+    const val OFFSET_key: Long = 24L
+    fun key(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_key, 32L)
+
+    /**
+     * Paired with the resolved hash to address the immutable read; the mutable store yields
+     * only a hash.
+     */
+    const val OFFSET_context: Long = 56L
+    fun context(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_context, 16L)
+
+    /**
+     * Stream one `GET_DATA` per leaf fragment instead of a single reassembled buffer, as
+     * `lore_storage_get` does. Peak memory then follows the fragment size rather than the
+     * content size, which is what makes a key naming something large usable. A read that fails
+     * partway reports the failure on `GET_ITEM_COMPLETE` rather than ending short with a
+     * success code
+     */
+    const val OFFSET_streaming: Long = 72L
+    fun streaming(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_streaming)
+    fun streaming(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_streaming, value)
+    }
+
+    /**
+     * Cache fetched bytes back to the local store even without the producer's
+     * `PayloadLocalCachePriority` hint
+     */
+    const val OFFSET_local_cache: Long = 73L
+    fun local_cache(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_local_cache)
+    fun local_cache(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_local_cache, value)
+    }
+
+    /**
+     * Deliver one `GET_FRAGMENT` per leaf fragment in content order in place of `GET_DATA`, each
+     * carrying the leaf's fragment and its payload as stored, with `streaming` ignored. No leaf
+     * is expanded or checked against its hash. An item with `data_out` supplied rejects with
+     * `INVALID_ARGUMENTS`
+     */
+    const val OFFSET_fragments: Long = 74L
+    fun fragments(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_fragments)
+    fun fragments(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_fragments, value)
+    }
+
+    /**
+     * Writable buffer receiving the content, `len` stating its capacity. Zero-initialized selects
+     * delivery in events.
+     * 
+     * The capacity is the limit: content exceeding it fails the item with
+     * `Oversized` rather than truncating. `GET_HEADER` reports the content
+     * size, no `GET_DATA` follows, and `streaming` is ignored. The buffer holds unspecified bytes
+     * when the item fails.
+     */
+    const val OFFSET_data_out: Long = 80L
+    fun data_out(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_data_out, 16L)
 }
 
 /**
@@ -15180,17 +17872,16 @@ object lore_storage_mutable_compare_and_swap_item_array_t {
 /**
  * Terminal per-item event for `mutable_compare_and_swap`. `previous` is the value the key held
  * before the swap (equal to the caller's `expected` when the swap took effect, otherwise the
- * actual current value). `error_code == None` on success.
+ * actual current value). `error.error_code == 0` on success.
  */
 object lore_storage_mutable_compare_and_swap_item_complete_event_data_t {
-    const val SIZE: Long = 48L
+    const val SIZE: Long = 80L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         ValueLayout.JAVA_LONG.withName("id"),
         lore_hash_t.LAYOUT.withName("previous"),
-        ValueLayout.JAVA_INT.withName("error_code"),
-        MemoryLayout.paddingLayout(4),
+        lore_error_detail_t.LAYOUT.withName("error"),
     ).withName("lore_storage_mutable_compare_and_swap_item_complete_event_data_t") as StructLayout
 
     /**
@@ -15213,12 +17904,9 @@ object lore_storage_mutable_compare_and_swap_item_complete_event_data_t {
     /**
      * The outcome for the item.
      */
-    const val OFFSET_error_code: Long = 40L
-    fun error_code(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
-    fun error_code(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
-    }
+    const val OFFSET_error: Long = 40L
+    fun error(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_error, 40L)
 }
 
 /**
@@ -15388,16 +18076,15 @@ object lore_storage_mutable_list_item_array_t {
 
 /**
  * Terminal per-item event for `mutable_list`, emitted after every `MUTABLE_LIST_ENTRY` for the
- * item. `error_code == None` once the listing completes.
+ * item. `error.error_code == 0` once the listing completes.
  */
 object lore_storage_mutable_list_item_complete_event_data_t {
-    const val SIZE: Long = 16L
+    const val SIZE: Long = 48L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         ValueLayout.JAVA_LONG.withName("id"),
-        ValueLayout.JAVA_INT.withName("error_code"),
-        MemoryLayout.paddingLayout(4),
+        lore_error_detail_t.LAYOUT.withName("error"),
     ).withName("lore_storage_mutable_list_item_complete_event_data_t") as StructLayout
 
     /**
@@ -15413,12 +18100,9 @@ object lore_storage_mutable_list_item_complete_event_data_t {
     /**
      * The outcome for the item.
      */
-    const val OFFSET_error_code: Long = 8L
-    fun error_code(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
-    fun error_code(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
-    }
+    const val OFFSET_error: Long = 8L
+    fun error(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_error, 40L)
 }
 
 /**
@@ -15525,19 +18209,19 @@ object lore_storage_mutable_load_item_array_t {
 }
 
 /**
- * Terminal per-item event for `mutable_load`. On success `error_code == None` and `value` is
- * the loaded value hash (`Hash::default()` when the key holds a null/removed value); on miss
- * `error_code == ADDRESS_NOT_FOUND` and `value` is zero.
+ * Terminal per-item event for `mutable_load`. On success `error.error_code == 0` and `value`
+ * is the loaded value hash (`Hash::default()` when the key holds a null/removed value); on
+ * miss `error` carries the miss the answering backend raised — `AddressNotFound` from a local
+ * store, `NotFound` from a remote one — and `value` is zero.
  */
 object lore_storage_mutable_load_item_complete_event_data_t {
-    const val SIZE: Long = 48L
+    const val SIZE: Long = 80L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         ValueLayout.JAVA_LONG.withName("id"),
         lore_hash_t.LAYOUT.withName("value"),
-        ValueLayout.JAVA_INT.withName("error_code"),
-        MemoryLayout.paddingLayout(4),
+        lore_error_detail_t.LAYOUT.withName("error"),
     ).withName("lore_storage_mutable_load_item_complete_event_data_t") as StructLayout
 
     /**
@@ -15560,12 +18244,9 @@ object lore_storage_mutable_load_item_complete_event_data_t {
     /**
      * The outcome for the item.
      */
-    const val OFFSET_error_code: Long = 40L
-    fun error_code(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
-    fun error_code(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
-    }
+    const val OFFSET_error: Long = 40L
+    fun error(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_error, 40L)
 }
 
 /**
@@ -15680,16 +18361,15 @@ object lore_storage_mutable_store_item_array_t {
 }
 
 /**
- * Terminal per-item event for `mutable_store`. `error_code == None` on a successful store.
+ * Terminal per-item event for `mutable_store`. `error.error_code == 0` on a successful store.
  */
 object lore_storage_mutable_store_item_complete_event_data_t {
-    const val SIZE: Long = 16L
+    const val SIZE: Long = 48L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         ValueLayout.JAVA_LONG.withName("id"),
-        ValueLayout.JAVA_INT.withName("error_code"),
-        MemoryLayout.paddingLayout(4),
+        lore_error_detail_t.LAYOUT.withName("error"),
     ).withName("lore_storage_mutable_store_item_complete_event_data_t") as StructLayout
 
     /**
@@ -15705,12 +18385,9 @@ object lore_storage_mutable_store_item_complete_event_data_t {
     /**
      * The outcome for the item.
      */
-    const val OFFSET_error_code: Long = 8L
-    fun error_code(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
-    fun error_code(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
-    }
+    const val OFFSET_error: Long = 8L
+    fun error(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_error, 40L)
 }
 
 /**
@@ -15837,11 +18514,10 @@ object lore_storage_obliterate_item_array_t {
  * whether the corresponding side completed without error. `local_skipped` / `remote_skipped`
  * report whether the corresponding side was suppressed up front by the handle's bound flags
  * (`globals.offline`/`local`/`remote`) — when a side is skipped, its `_success` flag is `0`
- * rather than a misleading `1`. `error_code` is populated if either side that DID run
- * failed.
+ * rather than a misleading `1`. `error` is populated if either side that DID run failed.
  */
 object lore_storage_obliterate_item_complete_event_data_t {
-    const val SIZE: Long = 64L
+    const val SIZE: Long = 104L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -15851,7 +18527,8 @@ object lore_storage_obliterate_item_complete_event_data_t {
         ValueLayout.JAVA_BYTE.withName("remote_success"),
         ValueLayout.JAVA_BYTE.withName("local_skipped"),
         ValueLayout.JAVA_BYTE.withName("remote_skipped"),
-        ValueLayout.JAVA_INT.withName("error_code"),
+        MemoryLayout.paddingLayout(4),
+        lore_error_detail_t.LAYOUT.withName("error"),
     ).withName("lore_storage_obliterate_item_complete_event_data_t") as StructLayout
 
     /**
@@ -15914,12 +18591,9 @@ object lore_storage_obliterate_item_complete_event_data_t {
     /**
      * The outcome for the item.
      */
-    const val OFFSET_error_code: Long = 60L
-    fun error_code(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
-    fun error_code(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
-    }
+    const val OFFSET_error: Long = 64L
+    fun error(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_error, 40L)
 }
 
 /**
@@ -15973,7 +18647,8 @@ object lore_storage_open_args_t {
         MemoryLayout.paddingLayout(7),
         lore_storage_remote_config_t.LAYOUT.withName("remote_config"),
         ValueLayout.JAVA_BYTE.withName("has_remote_config"),
-        MemoryLayout.paddingLayout(7),
+        ValueLayout.JAVA_BYTE.withName("skip_verify"),
+        MemoryLayout.paddingLayout(6),
         ValueLayout.JAVA_LONG.withName("cache_target_bytes"),
         ValueLayout.JAVA_LONG.withName("cache_target_fragments"),
     ).withName("lore_storage_open_args_t") as StructLayout
@@ -16010,6 +18685,18 @@ object lore_storage_open_args_t {
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_has_remote_config)
     fun has_remote_config(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_has_remote_config, value)
+    }
+
+    /**
+     * Alias of `globals.trust_remote` for this handle: the handle trusts its remote when either is
+     * set, so payloads fetched from it have only their sizes checked against their length and are
+     * never hashed. Payloads the local store holds are never hashed either way.
+     */
+    const val OFFSET_skip_verify: Long = 41L
+    fun skip_verify(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_skip_verify)
+    fun skip_verify(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_skip_verify, value)
     }
 
     /**
@@ -16230,6 +18917,160 @@ object lore_storage_put_file_item_t {
 }
 
 /**
+ * Arguments for `lore_storage_put_file_resolved`.
+ */
+object lore_storage_put_file_resolved_args_t {
+    const val SIZE: Long = 24L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_store_t.LAYOUT.withName("handle"),
+        lore_storage_put_file_resolved_item_array_t.LAYOUT.withName("items"),
+    ).withName("lore_storage_put_file_resolved_args_t") as StructLayout
+
+    /**
+     * Open storage handle
+     */
+    const val OFFSET_handle: Long = 0L
+    fun handle(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_handle, 8L)
+
+    /**
+     * Files to store and publish; each runs independently and emits its own `PUT_ITEM_COMPLETE`
+     */
+    const val OFFSET_items: Long = 8L
+    fun items(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_items, 16L)
+}
+
+/**
+ * A contiguous array of elements described by a pointer and a count.
+ * Holds zero or more values of the element type laid out one after another.
+ */
+object lore_storage_put_file_resolved_item_array_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("count"),
+    ).withName("lore_storage_put_file_resolved_item_array_t") as StructLayout
+
+    /**
+     * Pointer to the first element.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of elements in the array.
+     */
+    const val OFFSET_count: Long = 8L
+    fun count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
+    fun count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_count, value)
+    }
+}
+
+/**
+ * One `put_file_resolved` item — the file to store and the mutable key to publish it under.
+ */
+object lore_storage_put_file_resolved_item_t {
+    const val SIZE: Long = 104L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("id"),
+        lore_partition_t.LAYOUT.withName("partition"),
+        lore_hash_t.LAYOUT.withName("key"),
+        lore_context_t.LAYOUT.withName("context"),
+        lore_string_t.LAYOUT.withName("path"),
+        ValueLayout.JAVA_BYTE.withName("remote_write"),
+        ValueLayout.JAVA_BYTE.withName("local_cache"),
+        MemoryLayout.paddingLayout(6),
+        ValueLayout.JAVA_LONG.withName("fixed_size_chunk"),
+    ).withName("lore_storage_put_file_resolved_item_t") as StructLayout
+
+    /**
+     * Caller-chosen id echoed back in `PUT_ITEM_COMPLETE`
+     */
+    const val OFFSET_id: Long = 0L
+    fun id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
+    fun id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    }
+
+    /**
+     * Target partition; the zero/default partition rejects with `INVALID_ARGUMENTS`
+     */
+    const val OFFSET_partition: Long = 8L
+    fun partition(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_partition, 16L)
+
+    /**
+     * Mutable key to publish the stored hash under; a zero key rejects with `INVALID_ARGUMENTS`
+     */
+    const val OFFSET_key: Long = 24L
+    fun key(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_key, 32L)
+
+    /**
+     * Dedup tag stored alongside the content hash in the resulting address, and the context a
+     * later `get_file_resolved` must read the key at
+     */
+    const val OFFSET_context: Long = 56L
+    fun context(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_context, 16L)
+
+    /**
+     * Source path; empty, missing, or non-file rejects with `INVALID_ARGUMENTS`. A zero-length
+     * file removes the key's mapping instead of publishing one
+     */
+    const val OFFSET_path: Long = 72L
+    fun path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_path, 16L)
+
+    /**
+     * Also publish the content and the mapping to the remote; ignored when the handle has no
+     * remote or the call is offline/local
+     */
+    const val OFFSET_remote_write: Long = 88L
+    fun remote_write(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_remote_write)
+    fun remote_write(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_remote_write, value)
+    }
+
+    /**
+     * Tag the fragments with `PayloadLocalCachePriority` so future remote reads always cache them
+     * locally
+     */
+    const val OFFSET_local_cache: Long = 89L
+    fun local_cache(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_local_cache)
+    fun local_cache(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_local_cache, value)
+    }
+
+    /**
+     * Leaf fragment size cap for large files; `0` lets the writer choose. Ignored for files under
+     * `FRAGMENT_SIZE_THRESHOLD`
+     */
+    const val OFFSET_fixed_size_chunk: Long = 96L
+    fun fixed_size_chunk(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_fixed_size_chunk)
+    fun fixed_size_chunk(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_fixed_size_chunk, value)
+    }
+}
+
+/**
  * A contiguous array of elements described by a pointer and a count.
  * Holds zero or more values of the element type laid out one after another.
  */
@@ -16264,19 +19105,22 @@ object lore_storage_put_item_array_t {
 }
 
 /**
- * Terminal per-item event for `put` and `put_file`. On success
- * `error_code == None` and `address` is the computed content hash; on
- * failure `error_code` is populated and `address` is zero.
+ * Terminal per-item event for `put`, `put_file`, `put_resolved` and
+ * `put_file_resolved`. On success `error.error_code == 0` and `address` is the
+ * computed content hash — for the resolved variants, the content the key now
+ * resolves to; on failure `error` is populated and `address` is zero.
  */
 object lore_storage_put_item_complete_event_data_t {
-    const val SIZE: Long = 64L
+    const val SIZE: Long = 104L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         ValueLayout.JAVA_LONG.withName("id"),
         lore_address_t.LAYOUT.withName("address"),
-        ValueLayout.JAVA_INT.withName("error_code"),
-        MemoryLayout.paddingLayout(4),
+        lore_error_detail_t.LAYOUT.withName("error"),
+        ValueLayout.JAVA_BYTE.withName("stored_local"),
+        ValueLayout.JAVA_BYTE.withName("stored_remote"),
+        MemoryLayout.paddingLayout(6),
     ).withName("lore_storage_put_item_complete_event_data_t") as StructLayout
 
     /**
@@ -16299,11 +19143,31 @@ object lore_storage_put_item_complete_event_data_t {
     /**
      * The outcome for the item.
      */
-    const val OFFSET_error_code: Long = 56L
-    fun error_code(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
-    fun error_code(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
+    const val OFFSET_error: Long = 56L
+    fun error(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_error, 40L)
+
+    /**
+     * Non-zero when the local store holds the content.
+     */
+    const val OFFSET_stored_local: Long = 96L
+    fun stored_local(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_stored_local)
+    fun stored_local(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_stored_local, value)
+    }
+
+    /**
+     * Non-zero when the content reached the remote, or was already durable there. A remote
+     * write that fails still reports success if the local write succeeded — this is how a
+     * caller tells the two apart. For fragmented content it is the intersection across every
+     * fragment, so it is set only when the whole tree is remote.
+     */
+    const val OFFSET_stored_remote: Long = 97L
+    fun stored_remote(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_stored_remote)
+    fun stored_remote(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_stored_remote, value)
     }
 }
 
@@ -16381,6 +19245,161 @@ object lore_storage_put_item_t {
      * for buffers under `FRAGMENT_SIZE_THRESHOLD`
      */
     const val OFFSET_fixed_size_chunk: Long = 64L
+    fun fixed_size_chunk(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_fixed_size_chunk)
+    fun fixed_size_chunk(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_fixed_size_chunk, value)
+    }
+}
+
+/**
+ * Arguments for `lore_storage_put_resolved`.
+ */
+object lore_storage_put_resolved_args_t {
+    const val SIZE: Long = 24L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_store_t.LAYOUT.withName("handle"),
+        lore_storage_put_resolved_item_array_t.LAYOUT.withName("items"),
+    ).withName("lore_storage_put_resolved_args_t") as StructLayout
+
+    /**
+     * Open storage handle
+     */
+    const val OFFSET_handle: Long = 0L
+    fun handle(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_handle, 8L)
+
+    /**
+     * Buffers to store and publish; each runs independently and emits its own
+     * `PUT_ITEM_COMPLETE`
+     */
+    const val OFFSET_items: Long = 8L
+    fun items(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_items, 16L)
+}
+
+/**
+ * A contiguous array of elements described by a pointer and a count.
+ * Holds zero or more values of the element type laid out one after another.
+ */
+object lore_storage_put_resolved_item_array_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.ADDRESS.withName("ptr"),
+        ValueLayout.JAVA_LONG.withName("count"),
+    ).withName("lore_storage_put_resolved_item_array_t") as StructLayout
+
+    /**
+     * Pointer to the first element.
+     */
+    const val OFFSET_ptr: Long = 0L
+    fun ptr(struct: MemorySegment): MemorySegment =
+        struct.get(ValueLayout.ADDRESS, OFFSET_ptr)
+    fun ptr(struct: MemorySegment, value: MemorySegment) {
+        struct.set(ValueLayout.ADDRESS, OFFSET_ptr, value)
+    }
+
+    /**
+     * Number of elements in the array.
+     */
+    const val OFFSET_count: Long = 8L
+    fun count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
+    fun count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_count, value)
+    }
+}
+
+/**
+ * One put-resolved item — the buffer to store and the mutable key to publish it under.
+ */
+object lore_storage_put_resolved_item_t {
+    const val SIZE: Long = 104L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_LONG.withName("id"),
+        lore_partition_t.LAYOUT.withName("partition"),
+        lore_hash_t.LAYOUT.withName("key"),
+        lore_context_t.LAYOUT.withName("context"),
+        lore_bytes_t.LAYOUT.withName("data"),
+        ValueLayout.JAVA_BYTE.withName("remote_write"),
+        ValueLayout.JAVA_BYTE.withName("local_cache"),
+        MemoryLayout.paddingLayout(6),
+        ValueLayout.JAVA_LONG.withName("fixed_size_chunk"),
+    ).withName("lore_storage_put_resolved_item_t") as StructLayout
+
+    /**
+     * Caller-chosen id echoed back in `PUT_ITEM_COMPLETE`
+     */
+    const val OFFSET_id: Long = 0L
+    fun id(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_id)
+    fun id(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_id, value)
+    }
+
+    /**
+     * Target partition; the zero/default partition rejects with `INVALID_ARGUMENTS`
+     */
+    const val OFFSET_partition: Long = 8L
+    fun partition(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_partition, 16L)
+
+    /**
+     * Mutable key to publish the stored hash under; a zero key rejects with `INVALID_ARGUMENTS`
+     */
+    const val OFFSET_key: Long = 24L
+    fun key(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_key, 32L)
+
+    /**
+     * Dedup tag stored alongside the content hash in the resulting address, and the context a
+     * later `get_resolved` must read the key at
+     */
+    const val OFFSET_context: Long = 56L
+    fun context(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_context, 16L)
+
+    /**
+     * Borrowed view into caller memory; bytes must live until `Complete` fires. A zero-length
+     * buffer removes the key's mapping instead of publishing one
+     */
+    const val OFFSET_data: Long = 72L
+    fun data(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_data, 16L)
+
+    /**
+     * Also publish the content and the mapping to the remote; ignored when the handle has no
+     * remote or the call is offline/local
+     */
+    const val OFFSET_remote_write: Long = 88L
+    fun remote_write(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_remote_write)
+    fun remote_write(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_remote_write, value)
+    }
+
+    /**
+     * Tag the fragment with `PayloadLocalCachePriority` so future remote reads always cache it
+     * locally
+     */
+    const val OFFSET_local_cache: Long = 89L
+    fun local_cache(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_local_cache)
+    fun local_cache(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_local_cache, value)
+    }
+
+    /**
+     * Leaf fragment size cap for large buffers; `0` lets the writer choose. Ignored for buffers
+     * under `FRAGMENT_SIZE_THRESHOLD`
+     */
+    const val OFFSET_fixed_size_chunk: Long = 96L
     fun fixed_size_chunk(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_fixed_size_chunk)
     fun fixed_size_chunk(struct: MemorySegment, value: Long) {
@@ -16473,15 +19492,15 @@ object lore_storage_upload_item_array_t {
  * item was already flagged durable and no upload was performed.
  */
 object lore_storage_upload_item_complete_event_data_t {
-    const val SIZE: Long = 64L
+    const val SIZE: Long = 104L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         ValueLayout.JAVA_LONG.withName("id"),
         lore_address_t.LAYOUT.withName("address"),
         ValueLayout.JAVA_BYTE.withName("already_durable"),
-        MemoryLayout.paddingLayout(3),
-        ValueLayout.JAVA_INT.withName("error_code"),
+        MemoryLayout.paddingLayout(7),
+        lore_error_detail_t.LAYOUT.withName("error"),
     ).withName("lore_storage_upload_item_complete_event_data_t") as StructLayout
 
     /**
@@ -16514,12 +19533,9 @@ object lore_storage_upload_item_complete_event_data_t {
     /**
      * The outcome for the item.
      */
-    const val OFFSET_error_code: Long = 60L
-    fun error_code(struct: MemorySegment): Int =
-        struct.get(ValueLayout.JAVA_INT, OFFSET_error_code)
-    fun error_code(struct: MemorySegment, value: Int) {
-        struct.set(ValueLayout.JAVA_INT, OFFSET_error_code, value)
-    }
+    const val OFFSET_error: Long = 64L
+    fun error(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_error, 40L)
 }
 
 /**
@@ -16830,6 +19846,7 @@ object AllLayouts {
         lore_auth_login_interactive_args_t.LAYOUT,
         lore_auth_login_with_token_args_t.LAYOUT,
         lore_auth_logout_args_t.LAYOUT,
+        lore_auth_pending_event_data_t.LAYOUT,
         lore_auth_url_event_data_t.LAYOUT,
         lore_auth_user_info_args_t.LAYOUT,
         lore_auth_user_info_event_data_t.LAYOUT,
@@ -16851,6 +19868,7 @@ object AllLayouts {
         lore_branch_diff_node_data_t.LAYOUT,
         lore_branch_info_args_t.LAYOUT,
         lore_branch_info_event_data_t.LAYOUT,
+        lore_branch_latest_list_args_t.LAYOUT,
         lore_branch_latest_list_entry_event_data_t.LAYOUT,
         lore_branch_list_args_t.LAYOUT,
         lore_branch_list_begin_event_data_t.LAYOUT,
@@ -16903,6 +19921,7 @@ object AllLayouts {
         lore_branch_push_revision_push_update_event_data_t.LAYOUT,
         lore_branch_push_revision_update_begin_event_data_t.LAYOUT,
         lore_branch_push_revision_update_end_event_data_t.LAYOUT,
+        lore_branch_push_stats_event_data_t.LAYOUT,
         lore_branch_reset_args_t.LAYOUT,
         lore_branch_reset_event_data_t.LAYOUT,
         lore_branch_switch_args_t.LAYOUT,
@@ -16911,6 +19930,7 @@ object AllLayouts {
         lore_branch_switch_end_event_data_t.LAYOUT,
         lore_branch_unprotect_args_t.LAYOUT,
         lore_branch_unprotect_event_data_t.LAYOUT,
+        lore_bytes_mut_t.LAYOUT,
         lore_bytes_t.LAYOUT,
         lore_cherry_pick_abort_begin_event_data_t.LAYOUT,
         lore_cherry_pick_abort_end_event_data_t.LAYOUT,
@@ -16921,6 +19941,7 @@ object AllLayouts {
         lore_cherry_pick_start_end_event_data_t.LAYOUT,
         lore_cherry_pick_unresolve_file_event_data_t.LAYOUT,
         lore_cherry_pick_unresolve_revision_event_data_t.LAYOUT,
+        lore_commit_file_stats_data_t.LAYOUT,
         lore_compaction_begin_event_data_t.LAYOUT,
         lore_compaction_end_event_data_t.LAYOUT,
         lore_compaction_progress_event_data_t.LAYOUT,
@@ -16937,6 +19958,8 @@ object AllLayouts {
         lore_eviction_begin_event_data_t.LAYOUT,
         lore_eviction_end_event_data_t.LAYOUT,
         lore_eviction_progress_event_data_t.LAYOUT,
+        lore_file_audit_args_t.LAYOUT,
+        lore_file_audit_event_data_t.LAYOUT,
         lore_file_dependency_add_args_t.LAYOUT,
         lore_file_dependency_add_begin_event_data_t.LAYOUT,
         lore_file_dependency_add_end_event_data_t.LAYOUT,
@@ -16996,6 +20019,7 @@ object AllLayouts {
         lore_file_write_args_t.LAYOUT,
         lore_file_write_event_data_t.LAYOUT,
         lore_filter_exclude_event_data_t.LAYOUT,
+        lore_fragment_stats_data_t.LAYOUT,
         lore_fragment_t.LAYOUT,
         lore_fragment_write_event_data_t.LAYOUT,
         lore_global_args_t.LAYOUT,
@@ -17010,9 +20034,13 @@ object AllLayouts {
         lore_layer_remove_event_data_t.LAYOUT,
         lore_layer_staged_entry_event_data_t.LAYOUT,
         lore_link_add_args_t.LAYOUT,
+        lore_link_branch_create_event_data_t.LAYOUT,
         lore_link_change_event_data_t.LAYOUT,
         lore_link_entry_event_data_t.LAYOUT,
+        lore_link_info_args_t.LAYOUT,
+        lore_link_info_event_data_t.LAYOUT,
         lore_link_list_args_t.LAYOUT,
+        lore_link_list_staged_args_t.LAYOUT,
         lore_link_remove_args_t.LAYOUT,
         lore_link_staged_entry_event_data_t.LAYOUT,
         lore_link_update_args_t.LAYOUT,
@@ -17058,6 +20086,7 @@ object AllLayouts {
         lore_repository_create_args_t.LAYOUT,
         lore_repository_create_event_data_t.LAYOUT,
         lore_repository_data_event_data_t.LAYOUT,
+        lore_repository_delete_args_t.LAYOUT,
         lore_repository_dump_args_t.LAYOUT,
         lore_repository_dump_begin_event_data_t.LAYOUT,
         lore_repository_dump_end_event_data_t.LAYOUT,
@@ -17100,13 +20129,16 @@ object AllLayouts {
         lore_revert_unresolve_file_event_data_t.LAYOUT,
         lore_revert_unresolve_revision_event_data_t.LAYOUT,
         lore_revision_amend_args_t.LAYOUT,
+        lore_revision_bisect_args_t.LAYOUT,
         lore_revision_bisect_event_data_t.LAYOUT,
+        lore_revision_cherry_pick_args_t.LAYOUT,
         lore_revision_commit_args_t.LAYOUT,
         lore_revision_commit_begin_event_data_t.LAYOUT,
         lore_revision_commit_count_data_t.LAYOUT,
         lore_revision_commit_end_event_data_t.LAYOUT,
         lore_revision_commit_progress_event_data_t.LAYOUT,
         lore_revision_commit_revision_event_data_t.LAYOUT,
+        lore_revision_commit_stats_event_data_t.LAYOUT,
         lore_revision_diff_args_t.LAYOUT,
         lore_revision_diff_file_event_data_t.LAYOUT,
         lore_revision_find_args_t.LAYOUT,
@@ -17157,20 +20189,34 @@ object AllLayouts {
         lore_revision_tree_commit_options_t.LAYOUT,
         lore_revision_tree_delete_args_t.LAYOUT,
         lore_revision_tree_delete_complete_event_data_t.LAYOUT,
+        lore_revision_tree_delete_entry_array_t.LAYOUT,
+        lore_revision_tree_delete_entry_t.LAYOUT,
         lore_revision_tree_info_args_t.LAYOUT,
         lore_revision_tree_info_event_data_t.LAYOUT,
         lore_revision_tree_list_children_args_t.LAYOUT,
         lore_revision_tree_list_children_begin_event_data_t.LAYOUT,
         lore_revision_tree_load_args_t.LAYOUT,
         lore_revision_tree_loaded_event_data_t.LAYOUT,
+        lore_revision_tree_metadata_clear_args_t.LAYOUT,
+        lore_revision_tree_metadata_clear_complete_event_data_t.LAYOUT,
+        lore_revision_tree_metadata_clear_entry_array_t.LAYOUT,
+        lore_revision_tree_metadata_clear_entry_t.LAYOUT,
         lore_revision_tree_metadata_get_args_t.LAYOUT,
         lore_revision_tree_metadata_get_complete_event_data_t.LAYOUT,
+        lore_revision_tree_metadata_get_entry_array_t.LAYOUT,
+        lore_revision_tree_metadata_get_entry_t.LAYOUT,
         lore_revision_tree_metadata_set_args_t.LAYOUT,
         lore_revision_tree_metadata_set_complete_event_data_t.LAYOUT,
+        lore_revision_tree_metadata_set_entry_array_t.LAYOUT,
+        lore_revision_tree_metadata_set_entry_t.LAYOUT,
         lore_revision_tree_modify_args_t.LAYOUT,
         lore_revision_tree_modify_complete_event_data_t.LAYOUT,
+        lore_revision_tree_modify_entry_array_t.LAYOUT,
+        lore_revision_tree_modify_entry_t.LAYOUT,
         lore_revision_tree_move_args_t.LAYOUT,
         lore_revision_tree_move_complete_event_data_t.LAYOUT,
+        lore_revision_tree_move_entry_array_t.LAYOUT,
+        lore_revision_tree_move_entry_t.LAYOUT,
         lore_revision_tree_node_info_args_t.LAYOUT,
         lore_revision_tree_node_info_event_data_t.LAYOUT,
         lore_revision_tree_node_path_args_t.LAYOUT,
@@ -17178,12 +20224,21 @@ object AllLayouts {
         lore_revision_tree_resolve_path_args_t.LAYOUT,
         lore_revision_tree_resolve_path_complete_event_data_t.LAYOUT,
         lore_revision_tree_t.LAYOUT,
+        lore_service_message_event_data_t.LAYOUT,
+        lore_service_set_executable_args_t.LAYOUT,
+        lore_service_set_use_automatically_args_t.LAYOUT,
         lore_service_start_args_t.LAYOUT,
+        lore_service_status_args_t.LAYOUT,
+        lore_service_status_event_data_t.LAYOUT,
         lore_service_stop_args_t.LAYOUT,
         lore_shared_store_create_args_t.LAYOUT,
         lore_shared_store_create_event_data_t.LAYOUT,
         lore_shared_store_info_args_t.LAYOUT,
         lore_shared_store_info_event_data_t.LAYOUT,
+        lore_shared_store_list_args_t.LAYOUT,
+        lore_shared_store_list_event_data_t.LAYOUT,
+        lore_shared_store_list_item_array_t.LAYOUT,
+        lore_shared_store_list_item_t.LAYOUT,
         lore_shared_store_set_use_automatically_args_t.LAYOUT,
         lore_storage_close_args_t.LAYOUT,
         lore_storage_copy_args_t.LAYOUT,
@@ -17196,6 +20251,10 @@ object AllLayouts {
         lore_storage_get_file_args_t.LAYOUT,
         lore_storage_get_file_item_array_t.LAYOUT,
         lore_storage_get_file_item_t.LAYOUT,
+        lore_storage_get_file_resolved_args_t.LAYOUT,
+        lore_storage_get_file_resolved_item_array_t.LAYOUT,
+        lore_storage_get_file_resolved_item_t.LAYOUT,
+        lore_storage_get_fragment_event_data_t.LAYOUT,
         lore_storage_get_header_event_data_t.LAYOUT,
         lore_storage_get_item_array_t.LAYOUT,
         lore_storage_get_item_complete_event_data_t.LAYOUT,
@@ -17204,6 +20263,9 @@ object AllLayouts {
         lore_storage_get_metadata_item_array_t.LAYOUT,
         lore_storage_get_metadata_item_complete_event_data_t.LAYOUT,
         lore_storage_get_metadata_item_t.LAYOUT,
+        lore_storage_get_resolved_args_t.LAYOUT,
+        lore_storage_get_resolved_item_array_t.LAYOUT,
+        lore_storage_get_resolved_item_t.LAYOUT,
         lore_storage_mutable_compare_and_swap_args_t.LAYOUT,
         lore_storage_mutable_compare_and_swap_item_array_t.LAYOUT,
         lore_storage_mutable_compare_and_swap_item_complete_event_data_t.LAYOUT,
@@ -17231,9 +20293,15 @@ object AllLayouts {
         lore_storage_put_file_args_t.LAYOUT,
         lore_storage_put_file_item_array_t.LAYOUT,
         lore_storage_put_file_item_t.LAYOUT,
+        lore_storage_put_file_resolved_args_t.LAYOUT,
+        lore_storage_put_file_resolved_item_array_t.LAYOUT,
+        lore_storage_put_file_resolved_item_t.LAYOUT,
         lore_storage_put_item_array_t.LAYOUT,
         lore_storage_put_item_complete_event_data_t.LAYOUT,
         lore_storage_put_item_t.LAYOUT,
+        lore_storage_put_resolved_args_t.LAYOUT,
+        lore_storage_put_resolved_item_array_t.LAYOUT,
+        lore_storage_put_resolved_item_t.LAYOUT,
         lore_storage_remote_config_t.LAYOUT,
         lore_storage_upload_args_t.LAYOUT,
         lore_storage_upload_item_array_t.LAYOUT,

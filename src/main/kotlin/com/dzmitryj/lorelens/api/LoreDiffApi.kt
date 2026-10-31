@@ -98,6 +98,7 @@ object LoreDiffApi {
                     action = LoreFileAction.of(it.action),
                     oldAddress = address(it.old_address),
                     newAddress = address(it.new_address),
+                    fromPath = it.from_path.takeIf(String::isNotEmpty)?.let { from -> relative(root, from) },
                 )
             }
         }

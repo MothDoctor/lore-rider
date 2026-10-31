@@ -227,8 +227,10 @@ class LoreBranchGraphTab(private val project: Project) : ChangesViewContentProvi
             val after = changed.newAddress?.let {
                 LoreContentRevision(root, filePath, changed.path, newer, address = it)
             }
+            val beforePath = changed.fromPath ?: changed.path
+            val beforeFilePath = LocalFilePath(root.resolve(beforePath).toString(), false)
             val before = changed.oldAddress?.let { at ->
-                (older ?: newer).let { LoreContentRevision(root, filePath, changed.path, it, address = at) }
+                (older ?: newer).let { LoreContentRevision(root, beforeFilePath, beforePath, it, address = at) }
             }
 
             when {

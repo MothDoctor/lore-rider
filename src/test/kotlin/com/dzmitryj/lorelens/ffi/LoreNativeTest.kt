@@ -54,8 +54,8 @@ class LoreNativeTest {
 
     @Test
     fun `error codes resolve`() {
-        assertEquals(LoreStatus.NOT_AUTHENTICATED, LoreStatus.of(12))
-        assertEquals(LoreStatus.NOT_SUPPORTED, LoreStatus.of(18))
+        assertEquals(LoreStatus.NOT_AUTHENTICATED, LoreStatus.of(16))
+        assertEquals(LoreStatus.NOT_SUPPORTED, LoreStatus.of(9))
         assertEquals(null, LoreStatus.of(9999))
     }
 }

@@ -39,16 +39,23 @@ class EventEmitter(private val header: CHeader, private val types: TypeMapper) {
         struct.name != EVENT_STRUCT &&
             struct.fields.size == 2 &&
             struct.fields[1].type is CType.InlineUnion &&
-            types.resolve(struct.fields[0].type) is CType.EnumRef
+            tagEnumOf(struct) != null
 
-    private fun tagEnumOf(struct: CStruct): CEnum {
-        val ref = types.resolve(struct.fields[0].type) as CType.EnumRef
-        return header.enums.first { it.name == ref.name }
-    }
+    /**
+     * The enum holding the tag's values.
+     * A tag declared as a plain integer takes them from the struct's `_type_t` enum,
+     * e.g. lore_metadata_type_t for lore_metadata_t.
+     */
+    private fun tagEnumOf(struct: CStruct): CEnum? =
+        when (val tag = types.resolve(struct.fields[0].type)) {
+            is CType.EnumRef -> header.enums.first { it.name == tag.name }
+            is CType.Primitive -> header.enums.firstOrNull { it.name == struct.name.removeSuffix("_t") + "_type_t" }
+            else -> null
+        }
 
     /** Pairs each union member with the tag constant whose name ends in it. */
     private fun armsOf(struct: CStruct): List<Pair<CEnumConstant, CField>> {
-        val constants = tagEnumOf(struct).constants
+        val constants = checkNotNull(tagEnumOf(struct)).constants
         val members = (struct.fields[1].type as CType.InlineUnion).fields
 
         return members.map { member ->

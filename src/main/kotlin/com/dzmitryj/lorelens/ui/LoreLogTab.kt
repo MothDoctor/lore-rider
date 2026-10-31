@@ -565,9 +565,11 @@ class LoreLogTab(private val project: Project) : ChangesViewContentProvider {
                 val after = changed.newAddress?.let {
                     LoreContentRevision(root, filePath, changed.path, newerRevision, address = it)
                 }
+                val beforePath = changed.fromPath ?: changed.path
+                val beforeFilePath = LocalFilePath(root.resolve(beforePath).toString(), false)
                 val before = changed.oldAddress?.let { at ->
                     (olderRevision ?: newerRevision).let {
-                        LoreContentRevision(root, filePath, changed.path, it, address = at)
+                        LoreContentRevision(root, beforeFilePath, beforePath, it, address = at)
                     }
                 }
 

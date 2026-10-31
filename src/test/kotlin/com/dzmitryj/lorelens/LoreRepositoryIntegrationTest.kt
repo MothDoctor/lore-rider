@@ -635,12 +635,10 @@ class LoreRepositoryIntegrationTest {
     }
 
     /**
-     * A committed move diffs as an ADD of the new path and a DELETE of the old
-     * one -- there is no MOVE row -- which is why the change builders need no
-     * move case: the before side of the ADD legitimately does not exist.
+     * A committed move diffs as a single MOVE row of the new path, carrying the old path.
      */
     @Test
-    fun `a committed move diffs as add plus delete`() {
+    fun `a committed move diffs as one move row`() {
         repository.resolve("was.txt").writeText("content")
         LoreWriteApi.stage(repository, listOf("was.txt"))
         LoreWriteApi.commit(repository, "add")
@@ -652,10 +650,11 @@ class LoreRepositoryIntegrationTest {
         val after = LoreStatusApi.status(repository, scan = true).revision!!.revision.hex
 
         val changes = LoreDiffApi.revisionDiff(repository, before, after)
-            .associate { it.path to it.action }
 
-        assertEquals(LoreFileAction.ADD, changes["now.txt"])
-        assertEquals(LoreFileAction.DELETE, changes["was.txt"])
+        val moved = changes.single()
+        assertEquals("now.txt", moved.path)
+        assertEquals(LoreFileAction.MOVE, moved.action)
+        assertEquals("was.txt", moved.fromPath)
     }
 
     /**

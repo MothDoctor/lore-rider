@@ -93,6 +93,8 @@ data class LoreRevisionChange(
     val action: LoreFileAction,
     val oldAddress: String? = null,
     val newAddress: String? = null,
+    /** Previous path of a moved or copied file. */
+    val fromPath: String? = null,
 )
 
 /**
