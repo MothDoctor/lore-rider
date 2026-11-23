@@ -37,6 +37,24 @@ class ErrorCodeParserTest {
     }
 
     @Test
+    fun `reads the literal from the line after a wrapped attribute`() {
+        val codes = ErrorCodeParser.parse(
+            """
+            #[error(
+                "Plugin '{plugin_name}' not found. Available plugins: {}",
+                format_available_plugins(available_plugins)
+            )]
+            #[ffi_code(92)]
+            pub struct PluginNotFound {
+                pub plugin_name: String,
+            }
+            """.trimIndent()
+        )
+
+        assertEquals("Plugin '{plugin_name}' not found. Available plugins: {}", codes.single().message)
+    }
+
+    @Test
     fun `ignores types that carry no ffi code`() {
         val codes = ErrorCodeParser.parse(
             """

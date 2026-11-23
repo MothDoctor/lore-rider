@@ -1,4 +1,4 @@
-// Generated from lore.h 0.12.0 by :codegen. Do not edit.
+// Generated from lore.h 0.14.0 by :codegen. Do not edit.
 package com.dzmitryj.lorelens.ffi.generated
 
 /**
@@ -35,6 +35,7 @@ enum class LoreStatus(val code: Int, val message: String) {
     DELETE_CURRENT(48, "Cannot delete the current branch: {branch}"),
     DELETE_DEFAULT(49, "Unable to delete default branch: {branch}"),
     MOUNTS_BUSY(51, "Mounts are busy: {paths}"),
+    LINK_DIVERGENT(52, "Can't push the link at {path} (branch {branch}): the remote branch has newer revisions than yours"),
     ALREADY_LINKED(56, "Target repository is already used in a layer"),
     BRANCH_ALREADY_EXISTS(57, "Branch {branch} already exists, use switch instead"),
     REPOSITORY_ALREADY_EXISTS(58, "Repository already exist in path {path}"),
@@ -51,7 +52,7 @@ enum class LoreStatus(val code: Int, val message: String) {
     REPOSITORY_NOT_FOUND(89, "Repository not found: {repository}"),
     SHARED_STORE_NOT_FOUND(90, "A shared store was supposed to exist at {path}"),
     LOCK_NOT_FOUND(91, "lock does not exist"),
-    PLUGIN_NOT_FOUND(92, ""),
+    PLUGIN_NOT_FOUND(92, "Plugin '{plugin_name}' not found. Available plugins: {}"),
     MISSING_IDENTITY(110, "No commit identity configured; pass --identity or set identity in .lore/config.toml"),
     NO_REMOTE(111, "No remote configured"),
     PLUGIN_CONFIG_ERROR(112, "Plugin '{plugin_name}' configuration error: {message}"),

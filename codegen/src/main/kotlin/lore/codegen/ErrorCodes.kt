@@ -11,7 +11,9 @@ object ErrorCodeParser {
 
     // Some variants pass format arguments after the literal, so match only the
     // leading string rather than requiring the attribute to end right after it.
-    private val ERROR_ATTRIBUTE = Regex("""^#\[error\("((?:[^"\\]|\\.)*)"""")
+    // A long attribute puts the literal on the next line.
+    private val ERROR_ATTRIBUTE = Regex("""^#\[error\((?:"((?:[^"\\]|\\.)*)")?""")
+    private val STRING_LITERAL = Regex("""^"((?:[^"\\]|\\.)*)"""")
     private val FFI_CODE = Regex("""^#\[ffi_code\((\d+)\)]""")
     private val DECLARATION = Regex("""^pub (?:struct|enum) (\w+)""")
 
@@ -19,10 +21,18 @@ object ErrorCodeParser {
         val codes = mutableListOf<LoreErrorCode>()
         var message: String? = null
         var code: Int? = null
+        var literalOnNextLine = false
 
         source.lineSequence().forEach { raw ->
             val line = raw.trim()
-            ERROR_ATTRIBUTE.find(line)?.let { message = it.groupValues[1] }
+            if (literalOnNextLine) {
+                STRING_LITERAL.find(line)?.let { message = it.groupValues[1] }
+                literalOnNextLine = false
+            }
+            ERROR_ATTRIBUTE.find(line)?.let { attribute ->
+                val literal = attribute.groups[1]?.value
+                if (literal != null) message = literal else literalOnNextLine = true
+            }
             FFI_CODE.find(line)?.let { code = it.groupValues[1].toInt() }
 
             DECLARATION.find(line)?.let { declaration ->

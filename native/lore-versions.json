@@ -1,51 +1,51 @@
 {
-  "v0.12.0": {
-    "interfaceVersion": "0.12.0",
+  "v0.14.0": {
+    "interfaceVersion": "0.14.0",
     "errorCodes": {
       "path": "lore-base/src/error.rs",
-      "sha256": "f5981b9ccbd510fc515bdf62c31d70d50307e5ec140e87ad10addf8fd11f24a9"
+      "sha256": "fed5bf5ef7f571182c8cd052f30fa2ed79c0d00ddc6d5d3973c8db59674fa895"
     },
     "server": {
       "win-x64": {
-        "file": "loreserver-v0.12.0-x86_64-pc-windows-msvc.zip",
-        "sha256": "124be4a35a0b44685d07b3e52c3725ee1a2760380fad9026b06d30083e67b9a9",
+        "file": "loreserver-v0.14.0-x86_64-pc-windows-msvc.zip",
+        "sha256": "118b9db157d85a34c5988c4d475cacc7dab50f7cef8b547ecf4c6cdb808db22f",
         "binary": "loreserver.exe"
       },
       "linux-x64": {
-        "file": "loreserver-v0.12.0-x86_64-unknown-linux-gnu.tar.gz",
-        "sha256": "9372eb024ff571063b8b783dc99281fed7d73c96e234770266736873443d773a",
+        "file": "loreserver-v0.14.0-x86_64-unknown-linux-gnu.tar.gz",
+        "sha256": "900c0b508d2bb8856d9de1824c457b10bd3b33c1e0927fdecd9ed8511446cf81",
         "binary": "loreserver"
       },
       "linux-arm64": {
-        "file": "loreserver-v0.12.0-aarch64-unknown-linux-gnu-neoverse-512tvb.tar.gz",
-        "sha256": "940777fc84c0959ddaa6be9a1e93fdf28eee2e009828a77048e4cc3ca783d35e",
+        "file": "loreserver-v0.14.0-aarch64-unknown-linux-gnu-neoverse-512tvb.tar.gz",
+        "sha256": "a25fba6be87529e6448180fec9d9af5b254d9ecadf4160f59ec7aad30801b077",
         "binary": "loreserver"
       },
       "mac-arm64": {
-        "file": "loreserver-v0.12.0-aarch64-apple-darwin.tar.gz",
-        "sha256": "75e2f515e4aa0d71fbfbdede839c3404d18c5761236ec44221c368dc18515f39",
+        "file": "loreserver-v0.14.0-aarch64-apple-darwin.tar.gz",
+        "sha256": "38192a71c9341b4d2ab5891713d2b96e59a07b3a02be70ec918e6032b3bb97f6",
         "binary": "loreserver"
       }
     },
     "assets": {
       "win-x64": {
-        "file": "liblore-v0.12.0-x86_64-pc-windows-msvc.zip",
-        "sha256": "0b9f00ec2d118969e6cb6acdc58dce5c246d3b8b16bdfc84797bf2f51c1e7a13",
+        "file": "liblore-v0.14.0-x86_64-pc-windows-msvc.zip",
+        "sha256": "e5a1bccd59dd8b4a5cc898f3a0e1e381a4b48f0c087df1d26f29361a76f95768",
         "library": "lore.dll"
       },
       "linux-x64": {
-        "file": "liblore-v0.12.0-x86_64-unknown-linux-gnu.tar.gz",
-        "sha256": "6f5ef04bd85428eaefe67e95ae7a00c4accdeb3fcda55c4b58a6663a692301ab",
+        "file": "liblore-v0.14.0-x86_64-unknown-linux-gnu.tar.gz",
+        "sha256": "9cdbd569f1ae55ef08824f563daea374394fd4ef18f7aa0cb330c4dcf488006d",
         "library": "liblore.so"
       },
       "linux-arm64": {
-        "file": "liblore-v0.12.0-aarch64-unknown-linux-gnu-neoverse-512tvb.tar.gz",
-        "sha256": "d0921954c827cbcc48d26e8436cf664582bb99f73e4db44e9f19276010394e43",
+        "file": "liblore-v0.14.0-aarch64-unknown-linux-gnu-neoverse-512tvb.tar.gz",
+        "sha256": "ae64513fc31fb39145013034ba9c43e54e1cff474c9171c8828cb0bf460e727c",
         "library": "liblore.so"
       },
       "mac-arm64": {
-        "file": "liblore-v0.12.0-aarch64-apple-darwin.tar.gz",
-        "sha256": "e688f30f2dca6cf72b4da6f8b1f3d0f7ecafdfe374413ee501e344f6ebfd802f",
+        "file": "liblore-v0.14.0-aarch64-apple-darwin.tar.gz",
+        "sha256": "0233553f87af407523f8c0ce4a1191aade21a9733302d93611b4fad4a200d752",
         "library": "liblore.dylib"
       }
     }

@@ -1,4 +1,4 @@
-// Generated from lore.h 0.12.0 by :codegen. Do not edit.
+// Generated from lore.h 0.14.0 by :codegen. Do not edit.
 package com.dzmitryj.lorelens.ffi.generated
 
 import java.lang.foreign.MemoryLayout
@@ -169,7 +169,7 @@ object lore_auth_local_user_info_args_t {
         struct.asSlice(OFFSET_user_ids, 16L)
 
     /**
-     * Emit cached identity token details for identities with a local token
+     * Include the cached identity token string in `AuthUserToken` events
      */
     const val OFFSET_with_identity_token: Long = 32L
     fun with_identity_token(struct: MemorySegment): Byte =
@@ -200,7 +200,8 @@ object lore_auth_login_interactive_args_t {
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
         lore_string_t.LAYOUT.withName("remote_url"),
         ValueLayout.JAVA_BYTE.withName("no_browser"),
-        MemoryLayout.paddingLayout(7),
+        ValueLayout.JAVA_BYTE.withName("reuse_session"),
+        MemoryLayout.paddingLayout(6),
     ).withName("lore_auth_login_interactive_args_t") as StructLayout
 
     /**
@@ -218,6 +219,16 @@ object lore_auth_login_interactive_args_t {
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_no_browser)
     fun no_browser(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_no_browser, value)
+    }
+
+    /**
+     * Return the stored login instead of starting a new one while its session is valid
+     */
+    const val OFFSET_reuse_session: Long = 17L
+    fun reuse_session(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_reuse_session)
+    fun reuse_session(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_reuse_session, value)
     }
 }
 
@@ -443,7 +454,7 @@ object lore_auth_user_info_event_data_t {
  * Event data carrying a user token along with the identity it belongs to.
  */
 object lore_auth_user_token_event_data_t {
-    const val SIZE: Long = 80L
+    const val SIZE: Long = 96L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
@@ -454,6 +465,10 @@ object lore_auth_user_token_event_data_t {
         ValueLayout.JAVA_BYTE.withName("flag_service_account"),
         MemoryLayout.paddingLayout(7),
         ValueLayout.JAVA_LONG.withName("expires"),
+        ValueLayout.JAVA_LONG.withName("refresh_expires"),
+        ValueLayout.JAVA_BYTE.withName("refreshable"),
+        ValueLayout.JAVA_BYTE.withName("session_valid"),
+        MemoryLayout.paddingLayout(6),
     ).withName("lore_auth_user_token_event_data_t") as StructLayout
 
     /**
@@ -471,7 +486,7 @@ object lore_auth_user_token_event_data_t {
         struct.asSlice(OFFSET_name, 16L)
 
     /**
-     * The token string
+     * The token string, or empty when the caller did not ask for it
      */
     const val OFFSET_token: Long = 32L
     fun token(struct: MemorySegment): MemorySegment =
@@ -495,13 +510,45 @@ object lore_auth_user_token_event_data_t {
     }
 
     /**
-     * Expiry time in milliseconds since UNIX epoch, or 0 if unavailable
+     * Expiry time of `token` in milliseconds since UNIX epoch, or 0 if unavailable
      */
     const val OFFSET_expires: Long = 72L
     fun expires(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_expires)
     fun expires(struct: MemorySegment, value: Long) {
         struct.set(ValueLayout.JAVA_LONG, OFFSET_expires, value)
+    }
+
+    /**
+     * When the stored refresh token stops working, in milliseconds since the UNIX epoch. 0
+     * if there is no refresh token, or if the provider did not give a deadline.
+     */
+    const val OFFSET_refresh_expires: Long = 80L
+    fun refresh_expires(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_refresh_expires)
+    fun refresh_expires(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_refresh_expires, value)
+    }
+
+    /**
+     * Non-zero if a refresh token is stored for the identity
+     */
+    const val OFFSET_refreshable: Long = 88L
+    fun refreshable(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_refreshable)
+    fun refreshable(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_refreshable, value)
+    }
+
+    /**
+     * Non-zero if `token` has not expired, or if it has but the stored refresh token can still
+     * renew it
+     */
+    const val OFFSET_session_valid: Long = 89L
+    fun session_valid(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_session_valid)
+    fun session_valid(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_session_valid, value)
     }
 }
 
@@ -2514,17 +2561,33 @@ object lore_branch_push_branch_create_begin_event_data_t {
  * Data for the event sent after a branch is created on the remote.
  */
 object lore_branch_push_branch_create_end_event_data_t {
-    const val SIZE: Long = 32L
+    const val SIZE: Long = 64L
     const val ALIGNMENT: Long = 1L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_partition_t.LAYOUT.withName("repository"),
+        lore_context_t.LAYOUT.withName("branch"),
         lore_hash_t.LAYOUT.withName("remote_revision"),
     ).withName("lore_branch_push_branch_create_end_event_data_t") as StructLayout
 
     /**
+     * The repository being pushed.
+     */
+    const val OFFSET_repository: Long = 0L
+    fun repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository, 16L)
+
+    /**
+     * The branch being pushed.
+     */
+    const val OFFSET_branch: Long = 16L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
      * The revision the branch points to on the remote.
      */
-    const val OFFSET_remote_revision: Long = 0L
+    const val OFFSET_remote_revision: Long = 32L
     fun remote_revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_remote_revision, 32L)
 }
@@ -2659,18 +2722,34 @@ object lore_branch_push_event_data_t {
  * Data for the event sent before fragments are transferred during push.
  */
 object lore_branch_push_fragment_begin_event_data_t {
-    const val SIZE: Long = 16L
+    const val SIZE: Long = 48L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_partition_t.LAYOUT.withName("repository"),
+        lore_context_t.LAYOUT.withName("branch"),
         ValueLayout.JAVA_LONG.withName("fragments"),
         ValueLayout.JAVA_LONG.withName("bytes_total"),
     ).withName("lore_branch_push_fragment_begin_event_data_t") as StructLayout
 
     /**
+     * The repository being pushed.
+     */
+    const val OFFSET_repository: Long = 0L
+    fun repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository, 16L)
+
+    /**
+     * The branch being pushed.
+     */
+    const val OFFSET_branch: Long = 16L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
      * The number of fragments to transfer.
      */
-    const val OFFSET_fragments: Long = 0L
+    const val OFFSET_fragments: Long = 32L
     fun fragments(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_fragments)
     fun fragments(struct: MemorySegment, value: Long) {
@@ -2680,7 +2759,7 @@ object lore_branch_push_fragment_begin_event_data_t {
     /**
      * The total number of bytes to transfer.
      */
-    const val OFFSET_bytes_total: Long = 8L
+    const val OFFSET_bytes_total: Long = 40L
     fun bytes_total(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_bytes_total)
     fun bytes_total(struct: MemorySegment, value: Long) {
@@ -2692,18 +2771,34 @@ object lore_branch_push_fragment_begin_event_data_t {
  * Data for the event sent after fragments are transferred during push.
  */
 object lore_branch_push_fragment_end_event_data_t {
-    const val SIZE: Long = 16L
+    const val SIZE: Long = 48L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_partition_t.LAYOUT.withName("repository"),
+        lore_context_t.LAYOUT.withName("branch"),
         ValueLayout.JAVA_LONG.withName("fragments"),
         ValueLayout.JAVA_LONG.withName("bytes_transferred"),
     ).withName("lore_branch_push_fragment_end_event_data_t") as StructLayout
 
     /**
+     * The repository being pushed.
+     */
+    const val OFFSET_repository: Long = 0L
+    fun repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository, 16L)
+
+    /**
+     * The branch being pushed.
+     */
+    const val OFFSET_branch: Long = 16L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
      * The number of fragments transferred.
      */
-    const val OFFSET_fragments: Long = 0L
+    const val OFFSET_fragments: Long = 32L
     fun fragments(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_fragments)
     fun fragments(struct: MemorySegment, value: Long) {
@@ -2713,7 +2808,7 @@ object lore_branch_push_fragment_end_event_data_t {
     /**
      * The number of bytes transferred.
      */
-    const val OFFSET_bytes_transferred: Long = 8L
+    const val OFFSET_bytes_transferred: Long = 40L
     fun bytes_transferred(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_bytes_transferred)
     fun bytes_transferred(struct: MemorySegment, value: Long) {
@@ -2725,10 +2820,12 @@ object lore_branch_push_fragment_end_event_data_t {
  * Data for the event sent as fragments are transferred during push.
  */
 object lore_branch_push_fragment_progress_event_data_t {
-    const val SIZE: Long = 32L
+    const val SIZE: Long = 64L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_partition_t.LAYOUT.withName("repository"),
+        lore_context_t.LAYOUT.withName("branch"),
         ValueLayout.JAVA_LONG.withName("complete"),
         ValueLayout.JAVA_LONG.withName("count"),
         ValueLayout.JAVA_LONG.withName("bytes_transferred"),
@@ -2736,9 +2833,23 @@ object lore_branch_push_fragment_progress_event_data_t {
     ).withName("lore_branch_push_fragment_progress_event_data_t") as StructLayout
 
     /**
+     * The repository being pushed.
+     */
+    const val OFFSET_repository: Long = 0L
+    fun repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository, 16L)
+
+    /**
+     * The branch being pushed.
+     */
+    const val OFFSET_branch: Long = 16L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
      * The number of fragments transferred so far.
      */
-    const val OFFSET_complete: Long = 0L
+    const val OFFSET_complete: Long = 32L
     fun complete(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_complete)
     fun complete(struct: MemorySegment, value: Long) {
@@ -2748,7 +2859,7 @@ object lore_branch_push_fragment_progress_event_data_t {
     /**
      * The total number of fragments to transfer.
      */
-    const val OFFSET_count: Long = 8L
+    const val OFFSET_count: Long = 40L
     fun count(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_count)
     fun count(struct: MemorySegment, value: Long) {
@@ -2758,7 +2869,7 @@ object lore_branch_push_fragment_progress_event_data_t {
     /**
      * The number of bytes transferred so far.
      */
-    const val OFFSET_bytes_transferred: Long = 16L
+    const val OFFSET_bytes_transferred: Long = 48L
     fun bytes_transferred(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_bytes_transferred)
     fun bytes_transferred(struct: MemorySegment, value: Long) {
@@ -2768,7 +2879,7 @@ object lore_branch_push_fragment_progress_event_data_t {
     /**
      * The total number of bytes to transfer.
      */
-    const val OFFSET_bytes_total: Long = 24L
+    const val OFFSET_bytes_total: Long = 56L
     fun bytes_total(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_bytes_total)
     fun bytes_total(struct: MemorySegment, value: Long) {
@@ -2897,33 +3008,49 @@ object lore_branch_push_revision_push_end_event_data_t {
  * Data for the event sent when the remote assigns a pushed revision a new identity.
  */
 object lore_branch_push_revision_push_update_event_data_t {
-    const val SIZE: Long = 72L
+    const val SIZE: Long = 104L
     const val ALIGNMENT: Long = 8L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_partition_t.LAYOUT.withName("repository"),
+        lore_context_t.LAYOUT.withName("branch"),
         lore_hash_t.LAYOUT.withName("old_revision"),
         lore_hash_t.LAYOUT.withName("new_revision"),
         ValueLayout.JAVA_LONG.withName("new_revision_number"),
     ).withName("lore_branch_push_revision_push_update_event_data_t") as StructLayout
 
     /**
+     * The repository being pushed.
+     */
+    const val OFFSET_repository: Long = 0L
+    fun repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository, 16L)
+
+    /**
+     * The branch being pushed.
+     */
+    const val OFFSET_branch: Long = 16L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
      * The revision before the remote reassigned it.
      */
-    const val OFFSET_old_revision: Long = 0L
+    const val OFFSET_old_revision: Long = 32L
     fun old_revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_old_revision, 32L)
 
     /**
      * The revision the remote assigned.
      */
-    const val OFFSET_new_revision: Long = 32L
+    const val OFFSET_new_revision: Long = 64L
     fun new_revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_new_revision, 32L)
 
     /**
      * The sequential number of the new revision.
      */
-    const val OFFSET_new_revision_number: Long = 64L
+    const val OFFSET_new_revision_number: Long = 96L
     fun new_revision_number(struct: MemorySegment): Long =
         struct.get(ValueLayout.JAVA_LONG, OFFSET_new_revision_number)
     fun new_revision_number(struct: MemorySegment, value: Long) {
@@ -2935,33 +3062,49 @@ object lore_branch_push_revision_push_update_event_data_t {
  * Data for the event sent before a revision's parent is rewritten during push.
  */
 object lore_branch_push_revision_update_begin_event_data_t {
-    const val SIZE: Long = 96L
+    const val SIZE: Long = 128L
     const val ALIGNMENT: Long = 1L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_partition_t.LAYOUT.withName("repository"),
+        lore_context_t.LAYOUT.withName("branch"),
         lore_hash_t.LAYOUT.withName("revision"),
         lore_hash_t.LAYOUT.withName("old_parent"),
         lore_hash_t.LAYOUT.withName("new_parent"),
     ).withName("lore_branch_push_revision_update_begin_event_data_t") as StructLayout
 
     /**
+     * The repository being pushed.
+     */
+    const val OFFSET_repository: Long = 0L
+    fun repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository, 16L)
+
+    /**
+     * The branch being pushed.
+     */
+    const val OFFSET_branch: Long = 16L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
      * The revision being updated.
      */
-    const val OFFSET_revision: Long = 0L
+    const val OFFSET_revision: Long = 32L
     fun revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_revision, 32L)
 
     /**
      * The previous parent revision.
      */
-    const val OFFSET_old_parent: Long = 32L
+    const val OFFSET_old_parent: Long = 64L
     fun old_parent(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_old_parent, 32L)
 
     /**
      * The new parent revision.
      */
-    const val OFFSET_new_parent: Long = 64L
+    const val OFFSET_new_parent: Long = 96L
     fun new_parent(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_new_parent, 32L)
 }
@@ -2970,17 +3113,33 @@ object lore_branch_push_revision_update_begin_event_data_t {
  * Data for the event sent after a revision's parent is rewritten during push.
  */
 object lore_branch_push_revision_update_end_event_data_t {
-    const val SIZE: Long = 32L
+    const val SIZE: Long = 64L
     const val ALIGNMENT: Long = 1L
 
     val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_partition_t.LAYOUT.withName("repository"),
+        lore_context_t.LAYOUT.withName("branch"),
         lore_hash_t.LAYOUT.withName("revision"),
     ).withName("lore_branch_push_revision_update_end_event_data_t") as StructLayout
 
     /**
+     * The repository being pushed.
+     */
+    const val OFFSET_repository: Long = 0L
+    fun repository(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_repository, 16L)
+
+    /**
+     * The branch being pushed.
+     */
+    const val OFFSET_branch: Long = 16L
+    fun branch(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_branch, 16L)
+
+    /**
      * The updated revision.
      */
-    const val OFFSET_revision: Long = 0L
+    const val OFFSET_revision: Long = 32L
     fun revision(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_revision, 32L)
 }
@@ -2991,7 +3150,7 @@ object lore_branch_push_revision_update_end_event_data_t {
  * Emitted once, when the push finishes, at statistics level one and above. A
  * push that failed reports what it had done by then. The counts are cumulative
  * across every revision, link and layer the push registers, where
- * [`LoreBranchPushFragmentProgressEventData`] reports the revision in flight.
+ * `lore_branch_push_fragment_progress_event_data_t` reports one revision's share.
  * 
  * A push stores no payload of its own: a fragment the peer was asked about is
  * deduplicated, copied or put, unless the push ended before it was reached.
@@ -4114,7 +4273,7 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_maintenance_event_data_t.LAYOUT.withName("maintenance"), MemoryLayout.paddingLayout(256)).withName("maintenance"),
         MemoryLayout.structLayout(lore_auth_url_event_data_t.LAYOUT.withName("auth_url"), MemoryLayout.paddingLayout(240)).withName("auth_url"),
         MemoryLayout.structLayout(lore_auth_user_info_event_data_t.LAYOUT.withName("auth_user_info"), MemoryLayout.paddingLayout(240)).withName("auth_user_info"),
-        MemoryLayout.structLayout(lore_auth_user_token_event_data_t.LAYOUT.withName("auth_user_token"), MemoryLayout.paddingLayout(192)).withName("auth_user_token"),
+        MemoryLayout.structLayout(lore_auth_user_token_event_data_t.LAYOUT.withName("auth_user_token"), MemoryLayout.paddingLayout(176)).withName("auth_user_token"),
         MemoryLayout.structLayout(lore_auth_identity_event_data_t.LAYOUT.withName("auth_identity"), MemoryLayout.paddingLayout(184)).withName("auth_identity"),
         MemoryLayout.structLayout(lore_branch_create_event_data_t.LAYOUT.withName("branch_create"), MemoryLayout.paddingLayout(216)).withName("branch_create"),
         MemoryLayout.structLayout(lore_branch_multiple_instance_event_data_t.LAYOUT.withName("branch_multiple_instance"), MemoryLayout.paddingLayout(224)).withName("branch_multiple_instance"),
@@ -4171,15 +4330,15 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_revert_unresolve_revision_event_data_t.LAYOUT.withName("revert_unresolve_revision"), MemoryLayout.paddingLayout(224)).withName("revert_unresolve_revision"),
         MemoryLayout.structLayout(lore_branch_protect_event_data_t.LAYOUT.withName("branch_protect"), MemoryLayout.paddingLayout(256)).withName("branch_protect"),
         MemoryLayout.structLayout(lore_branch_push_event_data_t.LAYOUT.withName("branch_push"), MemoryLayout.paddingLayout(120)).withName("branch_push"),
-        MemoryLayout.structLayout(lore_branch_push_revision_update_begin_event_data_t.LAYOUT.withName("branch_push_revision_update_begin"), MemoryLayout.paddingLayout(176)).withName("branch_push_revision_update_begin"),
-        MemoryLayout.structLayout(lore_branch_push_revision_update_end_event_data_t.LAYOUT.withName("branch_push_revision_update_end"), MemoryLayout.paddingLayout(240)).withName("branch_push_revision_update_end"),
-        MemoryLayout.structLayout(lore_branch_push_fragment_begin_event_data_t.LAYOUT.withName("branch_push_fragment_begin"), MemoryLayout.paddingLayout(256)).withName("branch_push_fragment_begin"),
-        MemoryLayout.structLayout(lore_branch_push_fragment_progress_event_data_t.LAYOUT.withName("branch_push_fragment_progress"), MemoryLayout.paddingLayout(240)).withName("branch_push_fragment_progress"),
-        MemoryLayout.structLayout(lore_branch_push_fragment_end_event_data_t.LAYOUT.withName("branch_push_fragment_end"), MemoryLayout.paddingLayout(256)).withName("branch_push_fragment_end"),
+        MemoryLayout.structLayout(lore_branch_push_revision_update_begin_event_data_t.LAYOUT.withName("branch_push_revision_update_begin"), MemoryLayout.paddingLayout(144)).withName("branch_push_revision_update_begin"),
+        MemoryLayout.structLayout(lore_branch_push_revision_update_end_event_data_t.LAYOUT.withName("branch_push_revision_update_end"), MemoryLayout.paddingLayout(208)).withName("branch_push_revision_update_end"),
+        MemoryLayout.structLayout(lore_branch_push_fragment_begin_event_data_t.LAYOUT.withName("branch_push_fragment_begin"), MemoryLayout.paddingLayout(224)).withName("branch_push_fragment_begin"),
+        MemoryLayout.structLayout(lore_branch_push_fragment_progress_event_data_t.LAYOUT.withName("branch_push_fragment_progress"), MemoryLayout.paddingLayout(208)).withName("branch_push_fragment_progress"),
+        MemoryLayout.structLayout(lore_branch_push_fragment_end_event_data_t.LAYOUT.withName("branch_push_fragment_end"), MemoryLayout.paddingLayout(224)).withName("branch_push_fragment_end"),
         MemoryLayout.structLayout(lore_branch_push_branch_create_begin_event_data_t.LAYOUT.withName("branch_push_branch_create_begin"), MemoryLayout.paddingLayout(208)).withName("branch_push_branch_create_begin"),
-        MemoryLayout.structLayout(lore_branch_push_branch_create_end_event_data_t.LAYOUT.withName("branch_push_branch_create_end"), MemoryLayout.paddingLayout(240)).withName("branch_push_branch_create_end"),
+        MemoryLayout.structLayout(lore_branch_push_branch_create_end_event_data_t.LAYOUT.withName("branch_push_branch_create_end"), MemoryLayout.paddingLayout(208)).withName("branch_push_branch_create_end"),
         MemoryLayout.structLayout(lore_branch_push_revision_push_begin_event_data_t.LAYOUT.withName("branch_push_revision_push_begin"), MemoryLayout.paddingLayout(176)).withName("branch_push_revision_push_begin"),
-        MemoryLayout.structLayout(lore_branch_push_revision_push_update_event_data_t.LAYOUT.withName("branch_push_revision_push_update"), MemoryLayout.paddingLayout(200)).withName("branch_push_revision_push_update"),
+        MemoryLayout.structLayout(lore_branch_push_revision_push_update_event_data_t.LAYOUT.withName("branch_push_revision_push_update"), MemoryLayout.paddingLayout(168)).withName("branch_push_revision_push_update"),
         MemoryLayout.structLayout(lore_branch_push_revision_push_end_event_data_t.LAYOUT.withName("branch_push_revision_push_end"), MemoryLayout.paddingLayout(144)).withName("branch_push_revision_push_end"),
         MemoryLayout.structLayout(lore_branch_reset_event_data_t.LAYOUT.withName("branch_reset"), MemoryLayout.paddingLayout(208)).withName("branch_reset"),
         MemoryLayout.structLayout(lore_branch_switch_begin_event_data_t.LAYOUT.withName("branch_switch_begin"), MemoryLayout.paddingLayout(136)).withName("branch_switch_begin"),
@@ -4343,6 +4502,14 @@ object lore_event_t {
         MemoryLayout.structLayout(lore_auth_pending_event_data_t.LAYOUT.withName("auth_pending"), MemoryLayout.paddingLayout(248)).withName("auth_pending"),
         MemoryLayout.structLayout(lore_storage_get_fragment_event_data_t.LAYOUT.withName("storage_get_fragment"), MemoryLayout.paddingLayout(176)).withName("storage_get_fragment"),
         MemoryLayout.structLayout(lore_file_audit_event_data_t.LAYOUT.withName("file_audit"), MemoryLayout.paddingLayout(212)).withName("file_audit"),
+        MemoryLayout.structLayout(lore_repository_instance_delete_begin_event_data_t.LAYOUT.withName("repository_instance_delete_begin"), MemoryLayout.paddingLayout(232)).withName("repository_instance_delete_begin"),
+        MemoryLayout.structLayout(lore_repository_instance_delete_progress_event_data_t.LAYOUT.withName("repository_instance_delete_progress"), MemoryLayout.paddingLayout(268)).withName("repository_instance_delete_progress"),
+        MemoryLayout.structLayout(lore_repository_instance_delete_complete_event_data_t.LAYOUT.withName("repository_instance_delete_complete"), MemoryLayout.paddingLayout(256)).withName("repository_instance_delete_complete"),
+        MemoryLayout.structLayout(lore_repository_instance_move_begin_event_data_t.LAYOUT.withName("repository_instance_move_begin"), MemoryLayout.paddingLayout(224)).withName("repository_instance_move_begin"),
+        MemoryLayout.structLayout(lore_repository_instance_move_complete_event_data_t.LAYOUT.withName("repository_instance_move_complete"), MemoryLayout.paddingLayout(240)).withName("repository_instance_move_complete"),
+        MemoryLayout.structLayout(lore_repository_instance_clone_begin_event_data_t.LAYOUT.withName("repository_instance_clone_begin"), MemoryLayout.paddingLayout(144)).withName("repository_instance_clone_begin"),
+        MemoryLayout.structLayout(lore_repository_instance_clone_progress_event_data_t.LAYOUT.withName("repository_instance_clone_progress"), MemoryLayout.paddingLayout(224)).withName("repository_instance_clone_progress"),
+        MemoryLayout.structLayout(lore_repository_instance_clone_complete_event_data_t.LAYOUT.withName("repository_instance_clone_complete"), MemoryLayout.paddingLayout(216)).withName("repository_instance_clone_complete"),
     ).withName("union"),
     ).withName("lore_event_t") as StructLayout
 
@@ -5961,7 +6128,8 @@ object lore_file_obliterate_event_data_t {
 }
 
 /**
- * Arguments for resetting files to a revision, optionally purging untracked files.
+ * Arguments for resetting files to a revision, optionally deleting what the revision does not
+ * hold.
  */
 object lore_file_reset_args_t {
     const val SIZE: Long = 40L
@@ -5989,7 +6157,8 @@ object lore_file_reset_args_t {
         struct.asSlice(OFFSET_revision, 16L)
 
     /**
-     * Purge untracked files
+     * Delete what the revision does not hold within the view: untracked files, whatever the
+     * ignore file says, and files the view excludes. Nested repositories stay
      */
     const val OFFSET_purge: Long = 32L
     fun purge(struct: MemorySegment): Byte =
@@ -6183,7 +6352,8 @@ object lore_file_reset_to_last_merged_args_t {
         struct.asSlice(OFFSET_branch, 16L)
 
     /**
-     * Purge untracked files
+     * Delete what the revision does not hold within the view: untracked files, whatever the
+     * ignore file says, and files the view excludes. Nested repositories stay
      */
     const val OFFSET_purge: Long = 32L
     fun purge(struct: MemorySegment): Byte =
@@ -6235,7 +6405,8 @@ object lore_file_stage_args_t {
     }
 
     /**
-     * Force a recursive filesystem scan of directory paths (no effect on file paths)
+     * Walk directory paths recursively on the filesystem, as the global `force` argument also
+     * does (no effect on file paths)
      */
     const val OFFSET_scan: Long = 20L
     fun scan(struct: MemorySegment): Byte =
@@ -6584,7 +6755,7 @@ object lore_file_unstage_count_data_t {
     ).withName("lore_file_unstage_count_data_t") as StructLayout
 
     /**
-     * Number of directories that were unstaged.
+     * Number of directories and links that were unstaged.
      */
     const val OFFSET_directory_unstaged_count: Long = 0L
     fun directory_unstaged_count(struct: MemorySegment): Long =
@@ -7117,9 +7288,10 @@ object lore_fragment_stats_data_t {
     }
 
     /**
-     * Fragments whose upload did not land, leaving them stored only locally for
-     * a later push to offer again. Their payloads are counted under
-     * `local_payload_writes` too, indistinguishably from those kept by request.
+     * Fragments stored only locally for a later push to offer again. Either the
+     * upload failed or the peer throttled the copy and no upload was attempted.
+     * Their payloads also count toward `local_payload_writes`, which does not
+     * distinguish them from payloads kept locally by request.
      */
     const val OFFSET_remote_upload_failed: Long = 184L
     fun remote_upload_failed(struct: MemorySegment): Long =
@@ -7252,7 +7424,8 @@ object lore_global_args_t {
         ValueLayout.JAVA_LONG.withName("event_interval_ms"),
         ValueLayout.JAVA_INT.withName("auth_mode"),
         ValueLayout.JAVA_BYTE.withName("trust_remote"),
-        MemoryLayout.paddingLayout(3),
+        ValueLayout.JAVA_BYTE.withName("fast_flush"),
+        MemoryLayout.paddingLayout(2),
     ).withName("lore_global_args_t") as StructLayout
 
     /**
@@ -7456,9 +7629,9 @@ object lore_global_args_t {
     }
 
     /**
-     * Cache fragment payloads fetched from remote in the local store. Without
-     * this only state fragments and fragments flagged for local cache priority
-     * are retained
+     * Cache fragment payloads fetched from remote, and those written, in the local store, as
+     * a repository's `[store] cache_payloads` does for every command. Without either only state
+     * fragments and fragments flagged for local cache priority are retained
      */
     const val OFFSET_cache: Long = 129L
     fun cache(struct: MemorySegment): Byte =
@@ -7544,6 +7717,21 @@ object lore_global_args_t {
         struct.get(ValueLayout.JAVA_BYTE, OFFSET_trust_remote)
     fun trust_remote(struct: MemorySegment, value: Byte) {
         struct.set(ValueLayout.JAVA_BYTE, OFFSET_trust_remote, value)
+    }
+
+    /**
+     * Have the call's flushes write the local stores' index in place, rather than replacing each
+     * of its files through a temporary file, which is faster where creating files is slow. If the
+     * process stops or a write fails while a file is being written, the store drops every entry
+     * that file held, including those of revisions and branches not yet pushed. Eviction and
+     * compaction replace the files they write whatever it says, and it is independent of
+     * `sync_data`, which syncs what is written either way. Any non-zero value writes in place
+     */
+    const val OFFSET_fast_flush: Long = 189L
+    fun fast_flush(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_fast_flush)
+    fun fast_flush(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_fast_flush, value)
     }
 }
 
@@ -8523,21 +8711,22 @@ object lore_lock_file_query_args_t {
     ).withName("lore_lock_file_query_args_t") as StructLayout
 
     /**
-     * Branch to query locks on
+     * Branch to query locks on; empty queries every branch, or the current branch where `path`
+     * is given
      */
     const val OFFSET_branch: Long = 0L
     fun branch(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_branch, 16L)
 
     /**
-     * Owner filter; empty matches any owner
+     * Owner filter; empty matches any owner. Can't be combined with `path`
      */
     const val OFFSET_owner: Long = 16L
     fun owner(struct: MemorySegment): MemorySegment =
         struct.asSlice(OFFSET_owner, 16L)
 
     /**
-     * Path filter; empty matches any path
+     * Path filter; empty matches any path. Can't be combined with `owner`
      */
     const val OFFSET_path: Long = 32L
     fun path(struct: MemorySegment): MemorySegment =
@@ -9487,7 +9676,9 @@ object lore_repository_clone_args_t {
         struct.asSlice(OFFSET_layer_metadata, 16L)
 
     /**
-     * (Optional) File containing list of files to prefetch
+     * (Optional) Access recording whose paths a virtual clone warms in the background: one
+     * repository-relative path per line, a directory ending with `/`, `/` for the root. A
+     * relative file path resolves against the caller's working directory.
      */
     const val OFFSET_prefetch: Long = 88L
     fun prefetch(struct: MemorySegment): MemorySegment =
@@ -9495,7 +9686,9 @@ object lore_repository_clone_args_t {
 
     /**
      * Whether to use the shared store instead of a local immutable store. Zero-initialized
-     * (`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting.
+     * (`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting, except where `vfs`
+     * is a virtual one, which always uses a shared store and refuses
+     * `LORE_SHARED_STORE_MODE_DISABLED` with `InvalidArguments`.
      */
     const val OFFSET_use_shared_store: Long = 104L
     fun use_shared_store(struct: MemorySegment): Int =
@@ -9522,7 +9715,8 @@ object lore_repository_clone_args_t {
     }
 
     /**
-     * Root files for dependency-based selective clone
+     * Root files for dependency-based selective clone. A root file inside a link is skipped, and
+     * error code 9 (not supported) is returned when every root file is.
      */
     const val OFFSET_root_files: Long = 136L
     fun root_files(struct: MemorySegment): MemorySegment =
@@ -9862,7 +10056,9 @@ object lore_repository_create_args_t {
 
     /**
      * Whether to use the shared store instead of a local immutable store. Zero-initialized
-     * (`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting.
+     * (`LORE_SHARED_STORE_MODE_INHERIT`) follows the machine's global setting, except where `vfs`
+     * is a virtual one, which always uses a shared store and refuses
+     * `LORE_SHARED_STORE_MODE_DISABLED` with `InvalidArguments`.
      */
     const val OFFSET_use_shared_store: Long = 52L
     fun use_shared_store(struct: MemorySegment): Int =
@@ -10166,6 +10362,373 @@ object lore_repository_info_args_t {
 }
 
 /**
+ * Arguments for cloning the current repository instance to a new path.
+ */
+object lore_repository_instance_clone_args_t {
+    const val SIZE: Long = 24L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_string_t.LAYOUT.withName("target_path"),
+        ValueLayout.JAVA_BYTE.withName("allow_copy"),
+        MemoryLayout.paddingLayout(7),
+    ).withName("lore_repository_instance_clone_args_t") as StructLayout
+
+    /**
+     * Path the clone is created at, which must not exist; a relative path is resolved against
+     * `globals->working_directory`, or the process's working directory where that is empty
+     */
+    const val OFFSET_target_path: Long = 0L
+    fun target_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_target_path, 16L)
+
+    /**
+     * Nonzero to copy the instance's files where the clone cannot share their data blocks;
+     * zero refuses such a clone
+     */
+    const val OFFSET_allow_copy: Long = 16L
+    fun allow_copy(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_allow_copy)
+    fun allow_copy(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_allow_copy, value)
+    }
+}
+
+/**
+ * Event data for the start of an instance clone operation.
+ */
+object lore_repository_instance_clone_begin_event_data_t {
+    const val SIZE: Long = 128L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_instance_id_t.LAYOUT.withName("instance_id"),
+        lore_string_t.LAYOUT.withName("source_path"),
+        lore_string_t.LAYOUT.withName("target_path"),
+        ValueLayout.JAVA_INT.withName("method"),
+        MemoryLayout.paddingLayout(4),
+        lore_string_t.LAYOUT.withName("filesystem"),
+        lore_string_t.LAYOUT.withName("mount_point"),
+        ValueLayout.JAVA_LONG.withName("size"),
+        ValueLayout.JAVA_LONG.withName("file_count"),
+        ValueLayout.JAVA_LONG.withName("available_size"),
+        lore_string_t.LAYOUT.withName("reason"),
+    ).withName("lore_repository_instance_clone_begin_event_data_t") as StructLayout
+
+    /**
+     * Identifier of the instance being cloned
+     */
+    const val OFFSET_instance_id: Long = 0L
+    fun instance_id(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_instance_id, 16L)
+
+    /**
+     * Filesystem path of the instance being cloned
+     */
+    const val OFFSET_source_path: Long = 16L
+    fun source_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_source_path, 16L)
+
+    /**
+     * Filesystem path the clone is created at
+     */
+    const val OFFSET_target_path: Long = 32L
+    fun target_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_target_path, 16L)
+
+    /**
+     * How the clone is made
+     */
+    const val OFFSET_method: Long = 48L
+    fun method(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_method)
+    fun method(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_method, value)
+    }
+
+    /**
+     * Filesystem of the volume the clone is created on; empty for
+     * `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_UNSUPPORTED`
+     */
+    const val OFFSET_filesystem: Long = 56L
+    fun filesystem(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_filesystem, 16L)
+
+    /**
+     * Mount point of the volume the clone is created on; empty for
+     * `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_UNSUPPORTED`
+     */
+    const val OFFSET_mount_point: Long = 72L
+    fun mount_point(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_mount_point, 16L)
+
+    /**
+     * Bytes the copy takes on that volume, for `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_COPIES_BYTES`;
+     * zero otherwise
+     */
+    const val OFFSET_size: Long = 88L
+    fun size(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_size)
+    fun size(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_size, value)
+    }
+
+    /**
+     * Number of files the copy writes, for `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_COPIES_BYTES`;
+     * zero otherwise
+     */
+    const val OFFSET_file_count: Long = 96L
+    fun file_count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_file_count)
+    fun file_count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_file_count, value)
+    }
+
+    /**
+     * Bytes free on that volume, for `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_COPIES_BYTES`; zero
+     * otherwise
+     */
+    const val OFFSET_available_size: Long = 104L
+    fun available_size(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_available_size)
+    fun available_size(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_available_size, value)
+    }
+
+    /**
+     * Why the clone copies or cannot be made; empty for
+     * `LORE_REPOSITORY_INSTANCE_CLONE_METHOD_SHARES_BLOCKS`
+     */
+    const val OFFSET_reason: Long = 112L
+    fun reason(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_reason, 16L)
+}
+
+/**
+ * Event data for the completion of an instance clone operation.
+ */
+object lore_repository_instance_clone_complete_event_data_t {
+    const val SIZE: Long = 56L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_instance_id_t.LAYOUT.withName("instance_id"),
+        lore_string_t.LAYOUT.withName("target_path"),
+        ValueLayout.JAVA_LONG.withName("cloned_directory_count"),
+        ValueLayout.JAVA_LONG.withName("cloned_entry_count"),
+        ValueLayout.JAVA_LONG.withName("copied_file_count"),
+    ).withName("lore_repository_instance_clone_complete_event_data_t") as StructLayout
+
+    /**
+     * Identifier of the new instance, zero in a dry run
+     */
+    const val OFFSET_instance_id: Long = 0L
+    fun instance_id(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_instance_id, 16L)
+
+    /**
+     * Filesystem path of the new instance
+     */
+    const val OFFSET_target_path: Long = 16L
+    fun target_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_target_path, 16L)
+
+    /**
+     * Directories cloned as a whole, each with everything in it
+     */
+    const val OFFSET_cloned_directory_count: Long = 32L
+    fun cloned_directory_count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_cloned_directory_count)
+    fun cloned_directory_count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_cloned_directory_count, value)
+    }
+
+    /**
+     * Files and symbolic links cloned one by one
+     */
+    const val OFFSET_cloned_entry_count: Long = 40L
+    fun cloned_entry_count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_cloned_entry_count)
+    fun cloned_entry_count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_cloned_entry_count, value)
+    }
+
+    /**
+     * Files whose data was copied
+     */
+    const val OFFSET_copied_file_count: Long = 48L
+    fun copied_file_count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_copied_file_count)
+    fun copied_file_count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_copied_file_count, value)
+    }
+}
+
+/**
+ * Event data for progress during an instance clone operation.
+ */
+object lore_repository_instance_clone_progress_event_data_t {
+    const val SIZE: Long = 48L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_INT.withName("phase"),
+        MemoryLayout.paddingLayout(4),
+        lore_string_t.LAYOUT.withName("path"),
+        ValueLayout.JAVA_LONG.withName("cloned_directory_count"),
+        ValueLayout.JAVA_LONG.withName("cloned_entry_count"),
+        ValueLayout.JAVA_LONG.withName("copied_file_count"),
+    ).withName("lore_repository_instance_clone_progress_event_data_t") as StructLayout
+
+    /**
+     * Current phase of the clone operation
+     */
+    const val OFFSET_phase: Long = 0L
+    fun phase(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_phase)
+    fun phase(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_phase, value)
+    }
+
+    /**
+     * The directory the phase removes, for `LORE_REPOSITORY_INSTANCE_CLONE_PHASE_REMOVING_LEFTOVER`;
+     * empty otherwise
+     */
+    const val OFFSET_path: Long = 8L
+    fun path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_path, 16L)
+
+    /**
+     * Directories cloned as a whole so far, each with everything in it
+     */
+    const val OFFSET_cloned_directory_count: Long = 24L
+    fun cloned_directory_count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_cloned_directory_count)
+    fun cloned_directory_count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_cloned_directory_count, value)
+    }
+
+    /**
+     * Files and symbolic links cloned one by one so far
+     */
+    const val OFFSET_cloned_entry_count: Long = 32L
+    fun cloned_entry_count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_cloned_entry_count)
+    fun cloned_entry_count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_cloned_entry_count, value)
+    }
+
+    /**
+     * Files copied so far
+     */
+    const val OFFSET_copied_file_count: Long = 40L
+    fun copied_file_count(struct: MemorySegment): Long =
+        struct.get(ValueLayout.JAVA_LONG, OFFSET_copied_file_count)
+    fun copied_file_count(struct: MemorySegment, value: Long) {
+        struct.set(ValueLayout.JAVA_LONG, OFFSET_copied_file_count, value)
+    }
+}
+
+/**
+ * Arguments for deleting the current repository instance.
+ */
+object lore_repository_instance_delete_args_t {
+    const val SIZE: Long = 4L
+    const val ALIGNMENT: Long = 4L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_INT.withName("_unused"),
+    ).withName("lore_repository_instance_delete_args_t") as StructLayout
+
+    const val OFFSET__unused: Long = 0L
+    fun _unused(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET__unused)
+    fun _unused(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET__unused, value)
+    }
+}
+
+/**
+ * Event data for the start of an instance delete operation.
+ */
+object lore_repository_instance_delete_begin_event_data_t {
+    const val SIZE: Long = 40L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_instance_id_t.LAYOUT.withName("instance_id"),
+        lore_string_t.LAYOUT.withName("path"),
+        ValueLayout.JAVA_BYTE.withName("is_swfs"),
+        MemoryLayout.paddingLayout(7),
+    ).withName("lore_repository_instance_delete_begin_event_data_t") as StructLayout
+
+    /**
+     * Identifier of the instance being deleted
+     */
+    const val OFFSET_instance_id: Long = 0L
+    fun instance_id(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_instance_id, 16L)
+
+    /**
+     * Filesystem path of the instance
+     */
+    const val OFFSET_path: Long = 16L
+    fun path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_path, 16L)
+
+    /**
+     * Whether this is a SWFS-backed instance
+     */
+    const val OFFSET_is_swfs: Long = 32L
+    fun is_swfs(struct: MemorySegment): Byte =
+        struct.get(ValueLayout.JAVA_BYTE, OFFSET_is_swfs)
+    fun is_swfs(struct: MemorySegment, value: Byte) {
+        struct.set(ValueLayout.JAVA_BYTE, OFFSET_is_swfs, value)
+    }
+}
+
+/**
+ * Event data for the completion of an instance delete operation.
+ */
+object lore_repository_instance_delete_complete_event_data_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 1L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_instance_id_t.LAYOUT.withName("instance_id"),
+    ).withName("lore_repository_instance_delete_complete_event_data_t") as StructLayout
+
+    /**
+     * Identifier of the deleted instance
+     */
+    const val OFFSET_instance_id: Long = 0L
+    fun instance_id(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_instance_id, 16L)
+}
+
+/**
+ * Event data for progress during an instance delete operation.
+ */
+object lore_repository_instance_delete_progress_event_data_t {
+    const val SIZE: Long = 4L
+    const val ALIGNMENT: Long = 4L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        ValueLayout.JAVA_INT.withName("phase"),
+    ).withName("lore_repository_instance_delete_progress_event_data_t") as StructLayout
+
+    /**
+     * Current phase of the delete operation
+     */
+    const val OFFSET_phase: Long = 0L
+    fun phase(struct: MemorySegment): Int =
+        struct.get(ValueLayout.JAVA_INT, OFFSET_phase)
+    fun phase(struct: MemorySegment, value: Int) {
+        struct.set(ValueLayout.JAVA_INT, OFFSET_phase, value)
+    }
+}
+
+/**
  * Event data describing an instance — used for both listing and prune notifications.
  */
 object lore_repository_instance_event_data_t {
@@ -10249,6 +10812,87 @@ object lore_repository_instance_list_args_t {
     fun _unused(struct: MemorySegment, value: Int) {
         struct.set(ValueLayout.JAVA_INT, OFFSET__unused, value)
     }
+}
+
+/**
+ * Arguments for moving the current repository instance to a new path.
+ */
+object lore_repository_instance_move_args_t {
+    const val SIZE: Long = 16L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_string_t.LAYOUT.withName("target_path"),
+    ).withName("lore_repository_instance_move_args_t") as StructLayout
+
+    /**
+     * Target path for the instance.
+     */
+    const val OFFSET_target_path: Long = 0L
+    fun target_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_target_path, 16L)
+}
+
+/**
+ * Event data for the start of an instance move operation.
+ */
+object lore_repository_instance_move_begin_event_data_t {
+    const val SIZE: Long = 48L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_instance_id_t.LAYOUT.withName("instance_id"),
+        lore_string_t.LAYOUT.withName("source_path"),
+        lore_string_t.LAYOUT.withName("target_path"),
+    ).withName("lore_repository_instance_move_begin_event_data_t") as StructLayout
+
+    /**
+     * Identifier of the instance being moved
+     */
+    const val OFFSET_instance_id: Long = 0L
+    fun instance_id(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_instance_id, 16L)
+
+    /**
+     * Original filesystem path of the instance
+     */
+    const val OFFSET_source_path: Long = 16L
+    fun source_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_source_path, 16L)
+
+    /**
+     * New filesystem path for the instance
+     */
+    const val OFFSET_target_path: Long = 32L
+    fun target_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_target_path, 16L)
+}
+
+/**
+ * Event data for the completion of an instance move operation.
+ */
+object lore_repository_instance_move_complete_event_data_t {
+    const val SIZE: Long = 32L
+    const val ALIGNMENT: Long = 8L
+
+    val LAYOUT: StructLayout = MemoryLayout.structLayout(
+        lore_instance_id_t.LAYOUT.withName("instance_id"),
+        lore_string_t.LAYOUT.withName("target_path"),
+    ).withName("lore_repository_instance_move_complete_event_data_t") as StructLayout
+
+    /**
+     * Identifier of the moved instance
+     */
+    const val OFFSET_instance_id: Long = 0L
+    fun instance_id(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_instance_id, 16L)
+
+    /**
+     * New filesystem path of the instance
+     */
+    const val OFFSET_target_path: Long = 16L
+    fun target_path(struct: MemorySegment): MemorySegment =
+        struct.asSlice(OFFSET_target_path, 16L)
 }
 
 /**
@@ -13532,7 +14176,8 @@ object lore_revision_sync_args_t {
     }
 
     /**
-     * Root files for dependency-based selective sync
+     * Root files for dependency-based selective sync. A root file inside a link is skipped, and
+     * error code 9 (not supported) is returned when every root file is.
      */
     const val OFFSET_root_files: Long = 24L
     fun root_files(struct: MemorySegment): MemorySegment =
@@ -14182,9 +14827,10 @@ object lore_revision_tree_batch_complete_event_data_t {
 }
 
 /**
- * Per-child event from `list_children`. One event is emitted per entry;
- * the caller correlates entries by `id` and detects end-of-list via the
- * trailing `Complete` event.
+ * Per-child event from `list_children`, one per child the listing reaches;
+ * moves and deletions on the same handle beside the listing may have a child
+ * reported twice (`lore_revision_tree_list_children`). The caller correlates
+ * entries by `id` and detects end-of-list via the trailing `Complete` event.
  */
 object lore_revision_tree_child_event_data_t {
     const val SIZE: Long = 112L
@@ -14550,7 +15196,7 @@ object lore_revision_tree_delete_complete_event_data_t {
 
     /**
      * How many nodes the entry's subtree removed, staged and discarded
-     * together. Zero on failure, since nothing was removed.
+     * together. Zero on failure, whatever part of the subtree was removed.
      */
     const val OFFSET_node_count: Long = 8L
     fun node_count(struct: MemorySegment): Long =
@@ -20093,8 +20739,19 @@ object AllLayouts {
         lore_repository_flush_args_t.LAYOUT,
         lore_repository_gc_args_t.LAYOUT,
         lore_repository_info_args_t.LAYOUT,
+        lore_repository_instance_clone_args_t.LAYOUT,
+        lore_repository_instance_clone_begin_event_data_t.LAYOUT,
+        lore_repository_instance_clone_complete_event_data_t.LAYOUT,
+        lore_repository_instance_clone_progress_event_data_t.LAYOUT,
+        lore_repository_instance_delete_args_t.LAYOUT,
+        lore_repository_instance_delete_begin_event_data_t.LAYOUT,
+        lore_repository_instance_delete_complete_event_data_t.LAYOUT,
+        lore_repository_instance_delete_progress_event_data_t.LAYOUT,
         lore_repository_instance_event_data_t.LAYOUT,
         lore_repository_instance_list_args_t.LAYOUT,
+        lore_repository_instance_move_args_t.LAYOUT,
+        lore_repository_instance_move_begin_event_data_t.LAYOUT,
+        lore_repository_instance_move_complete_event_data_t.LAYOUT,
         lore_repository_instance_prune_args_t.LAYOUT,
         lore_repository_list_args_t.LAYOUT,
         lore_repository_list_entry_event_data_t.LAYOUT,

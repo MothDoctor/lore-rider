@@ -1,4 +1,4 @@
-// Generated from lore.h 0.12.0 by :codegen. Do not edit.
+// Generated from lore.h 0.14.0 by :codegen. Do not edit.
 package com.dzmitryj.lorelens.ffi.generated
 
 /**
@@ -1061,6 +1061,38 @@ object lore_event_id_t {
      * One range of a file's lines, attributed to the revision that last changed them.
      */
     const val LORE_EVENT_FILE_AUDIT: Int = 237
+    /**
+     * The start of an instance delete operation.
+     */
+    const val LORE_EVENT_REPOSITORY_INSTANCE_DELETE_BEGIN: Int = 238
+    /**
+     * Progress during an instance delete operation.
+     */
+    const val LORE_EVENT_REPOSITORY_INSTANCE_DELETE_PROGRESS: Int = 239
+    /**
+     * The completion of an instance delete operation.
+     */
+    const val LORE_EVENT_REPOSITORY_INSTANCE_DELETE_COMPLETE: Int = 240
+    /**
+     * The start of an instance move operation.
+     */
+    const val LORE_EVENT_REPOSITORY_INSTANCE_MOVE_BEGIN: Int = 241
+    /**
+     * The completion of an instance move operation.
+     */
+    const val LORE_EVENT_REPOSITORY_INSTANCE_MOVE_COMPLETE: Int = 242
+    /**
+     * The start of an instance clone operation.
+     */
+    const val LORE_EVENT_REPOSITORY_INSTANCE_CLONE_BEGIN: Int = 243
+    /**
+     * Progress during an instance clone operation.
+     */
+    const val LORE_EVENT_REPOSITORY_INSTANCE_CLONE_PROGRESS: Int = 244
+    /**
+     * The completion of an instance clone operation.
+     */
+    const val LORE_EVENT_REPOSITORY_INSTANCE_CLONE_COMPLETE: Int = 245
 }
 
 /**
@@ -1320,6 +1352,65 @@ object lore_node_type_t {
 }
 
 /**
+ * How an instance clone is made, as decided before the clone writes anything.
+ */
+object lore_repository_instance_clone_method_t {
+    /**
+     * The clone shares the instance's data blocks, costing filesystem metadata, not content
+     */
+    const val LORE_REPOSITORY_INSTANCE_CLONE_METHOD_SHARES_BLOCKS: Int = 0
+    /**
+     * The clone copies the instance's files
+     */
+    const val LORE_REPOSITORY_INSTANCE_CLONE_METHOD_COPIES_BYTES: Int = 1
+    /**
+     * The instance cannot be cloned to the destination
+     */
+    const val LORE_REPOSITORY_INSTANCE_CLONE_METHOD_UNSUPPORTED: Int = 2
+}
+
+/**
+ * Phase of an instance clone operation.
+ */
+object lore_repository_instance_clone_phase_t {
+    /**
+     * Removing a directory an interrupted clone to the same destination left, named by the
+     * event's path, before the instance's lock is taken
+     */
+    const val LORE_REPOSITORY_INSTANCE_CLONE_PHASE_REMOVING_LEFTOVER: Int = 0
+    /**
+     * Writing the instance's modified-time records back to disk
+     */
+    const val LORE_REPOSITORY_INSTANCE_CLONE_PHASE_WRITING_RECORDS: Int = 1
+    /**
+     * Copying the instance's directory, sent again each event interval with the counts so far
+     */
+    const val LORE_REPOSITORY_INSTANCE_CLONE_PHASE_COPYING: Int = 2
+    /**
+     * Giving the clone the instance's anchors, moving it to its path and registering it
+     */
+    const val LORE_REPOSITORY_INSTANCE_CLONE_PHASE_REGISTERING: Int = 3
+}
+
+/**
+ * Phase of an instance delete operation.
+ */
+object lore_repository_instance_delete_phase_t {
+    /**
+     * Unmounting the instance, an SWFS instance or a virtual clone
+     */
+    const val LORE_REPOSITORY_INSTANCE_DELETE_PHASE_UNMOUNTING: Int = 0
+    /**
+     * Removing instance keys from mutable store
+     */
+    const val LORE_REPOSITORY_INSTANCE_DELETE_PHASE_DEREGISTERING: Int = 1
+    /**
+     * Deleting external directories or repository directory
+     */
+    const val LORE_REPOSITORY_INSTANCE_DELETE_PHASE_DELETING_FILES: Int = 2
+}
+
+/**
  * What a revision specifier names on a branch.
  */
 object lore_revision_resolve_target_t {
@@ -1379,5 +1470,9 @@ object lore_vfs_type_t {
      * Use SWFS as a VFS
      */
     const val LORE_VFS_TYPE_SWFS: Int = 2
+    /**
+     * Use a Linux FUSE mount served by the Lore service as a VFS
+     */
+    const val LORE_VFS_TYPE_FUSE: Int = 3
 }
 

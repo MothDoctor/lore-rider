@@ -1,4 +1,4 @@
-// Generated from lore.h 0.12.0 by :codegen. Do not edit.
+// Generated from lore.h 0.14.0 by :codegen. Do not edit.
 package com.dzmitryj.lorelens.ffi.generated
 
 import com.dzmitryj.lorelens.ffi.LoreCopy
@@ -92,6 +92,9 @@ data class AuthUserTokenEvent(
     val preferred_username: String,
     val flag_service_account: Byte,
     val expires: Long,
+    val refresh_expires: Long,
+    val refreshable: Byte,
+    val session_valid: Byte,
 ) : LoreEvent
 
 /**
@@ -568,6 +571,8 @@ data class BranchPushEvent(
  * The start of updating a revision during a push.
  */
 data class BranchPushRevisionUpdateBeginEvent(
+    val repository: ByteArray,
+    val branch: ByteArray,
     val revision: ByteArray,
     val old_parent: ByteArray,
     val new_parent: ByteArray,
@@ -577,6 +582,8 @@ data class BranchPushRevisionUpdateBeginEvent(
  * The end of updating a revision during a push.
  */
 data class BranchPushRevisionUpdateEndEvent(
+    val repository: ByteArray,
+    val branch: ByteArray,
     val revision: ByteArray,
 ) : LoreEvent
 
@@ -584,6 +591,8 @@ data class BranchPushRevisionUpdateEndEvent(
  * The start of pushing a fragment.
  */
 data class BranchPushFragmentBeginEvent(
+    val repository: ByteArray,
+    val branch: ByteArray,
     val fragments: Long,
     val bytes_total: Long,
 ) : LoreEvent
@@ -592,6 +601,8 @@ data class BranchPushFragmentBeginEvent(
  * Progress while pushing a fragment.
  */
 data class BranchPushFragmentProgressEvent(
+    val repository: ByteArray,
+    val branch: ByteArray,
     val complete: Long,
     val count: Long,
     val bytes_transferred: Long,
@@ -602,6 +613,8 @@ data class BranchPushFragmentProgressEvent(
  * The end of pushing a fragment.
  */
 data class BranchPushFragmentEndEvent(
+    val repository: ByteArray,
+    val branch: ByteArray,
     val fragments: Long,
     val bytes_transferred: Long,
 ) : LoreEvent
@@ -619,6 +632,8 @@ data class BranchPushBranchCreateBeginEvent(
  * The end of creating a branch during a push.
  */
 data class BranchPushBranchCreateEndEvent(
+    val repository: ByteArray,
+    val branch: ByteArray,
     val remote_revision: ByteArray,
 ) : LoreEvent
 
@@ -636,6 +651,8 @@ data class BranchPushRevisionPushBeginEvent(
  * An update while pushing a revision.
  */
 data class BranchPushRevisionPushUpdateEvent(
+    val repository: ByteArray,
+    val branch: ByteArray,
     val old_revision: ByteArray,
     val new_revision: ByteArray,
     val new_revision_number: Long,
@@ -2172,6 +2189,84 @@ data class FileAuditEvent(
     val outcome: Int,
 ) : LoreEvent
 
+/**
+ * The start of an instance delete operation.
+ */
+data class RepositoryInstanceDeleteBeginEvent(
+    val instance_id: ByteArray,
+    val path: String,
+    val is_swfs: Byte,
+) : LoreEvent
+
+/**
+ * Progress during an instance delete operation.
+ */
+data class RepositoryInstanceDeleteProgressEvent(
+    val phase: Int,
+) : LoreEvent
+
+/**
+ * The completion of an instance delete operation.
+ */
+data class RepositoryInstanceDeleteCompleteEvent(
+    val instance_id: ByteArray,
+) : LoreEvent
+
+/**
+ * The start of an instance move operation.
+ */
+data class RepositoryInstanceMoveBeginEvent(
+    val instance_id: ByteArray,
+    val source_path: String,
+    val target_path: String,
+) : LoreEvent
+
+/**
+ * The completion of an instance move operation.
+ */
+data class RepositoryInstanceMoveCompleteEvent(
+    val instance_id: ByteArray,
+    val target_path: String,
+) : LoreEvent
+
+/**
+ * The start of an instance clone operation.
+ */
+data class RepositoryInstanceCloneBeginEvent(
+    val instance_id: ByteArray,
+    val source_path: String,
+    val target_path: String,
+    val method: Int,
+    val filesystem: String,
+    val mount_point: String,
+    val size: Long,
+    val file_count: Long,
+    val available_size: Long,
+    val reason: String,
+) : LoreEvent
+
+/**
+ * Progress during an instance clone operation.
+ */
+data class RepositoryInstanceCloneProgressEvent(
+    val phase: Int,
+    val path: String,
+    val cloned_directory_count: Long,
+    val cloned_entry_count: Long,
+    val copied_file_count: Long,
+) : LoreEvent
+
+/**
+ * The completion of an instance clone operation.
+ */
+data class RepositoryInstanceCloneCompleteEvent(
+    val instance_id: ByteArray,
+    val target_path: String,
+    val cloned_directory_count: Long,
+    val cloned_entry_count: Long,
+    val copied_file_count: Long,
+) : LoreEvent
+
 data class ErrorDetail(
     val error_code: Int,
     val message: String,
@@ -2396,7 +2491,7 @@ object LoreEventReader {
             6 -> MaintenanceEvent(message = LoreCopy.string(lore_maintenance_event_data_t.message(payload.asSlice(0L, lore_maintenance_event_data_t.SIZE))))
             7 -> AuthUrlEvent(url = LoreCopy.string(lore_auth_url_event_data_t.url(payload.asSlice(0L, lore_auth_url_event_data_t.SIZE))), user_code = LoreCopy.string(lore_auth_url_event_data_t.user_code(payload.asSlice(0L, lore_auth_url_event_data_t.SIZE))))
             8 -> AuthUserInfoEvent(id = LoreCopy.string(lore_auth_user_info_event_data_t.id(payload.asSlice(0L, lore_auth_user_info_event_data_t.SIZE))), name = LoreCopy.string(lore_auth_user_info_event_data_t.name(payload.asSlice(0L, lore_auth_user_info_event_data_t.SIZE))))
-            9 -> AuthUserTokenEvent(id = LoreCopy.string(lore_auth_user_token_event_data_t.id(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE))), name = LoreCopy.string(lore_auth_user_token_event_data_t.name(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE))), token = LoreCopy.string(lore_auth_user_token_event_data_t.token(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE))), preferred_username = LoreCopy.string(lore_auth_user_token_event_data_t.preferred_username(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE))), flag_service_account = lore_auth_user_token_event_data_t.flag_service_account(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE)), expires = lore_auth_user_token_event_data_t.expires(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE)))
+            9 -> AuthUserTokenEvent(id = LoreCopy.string(lore_auth_user_token_event_data_t.id(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE))), name = LoreCopy.string(lore_auth_user_token_event_data_t.name(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE))), token = LoreCopy.string(lore_auth_user_token_event_data_t.token(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE))), preferred_username = LoreCopy.string(lore_auth_user_token_event_data_t.preferred_username(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE))), flag_service_account = lore_auth_user_token_event_data_t.flag_service_account(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE)), expires = lore_auth_user_token_event_data_t.expires(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE)), refresh_expires = lore_auth_user_token_event_data_t.refresh_expires(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE)), refreshable = lore_auth_user_token_event_data_t.refreshable(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE)), session_valid = lore_auth_user_token_event_data_t.session_valid(payload.asSlice(0L, lore_auth_user_token_event_data_t.SIZE)))
             10 -> AuthIdentityEvent(auth_url = LoreCopy.string(lore_auth_identity_event_data_t.auth_url(payload.asSlice(0L, lore_auth_identity_event_data_t.SIZE))), resource = LoreCopy.string(lore_auth_identity_event_data_t.resource(payload.asSlice(0L, lore_auth_identity_event_data_t.SIZE))), user_id = LoreCopy.string(lore_auth_identity_event_data_t.user_id(payload.asSlice(0L, lore_auth_identity_event_data_t.SIZE))), authorized_domains = LoreCopy.string(lore_auth_identity_event_data_t.authorized_domains(payload.asSlice(0L, lore_auth_identity_event_data_t.SIZE))), expires = lore_auth_identity_event_data_t.expires(payload.asSlice(0L, lore_auth_identity_event_data_t.SIZE)), token = LoreCopy.string(lore_auth_identity_event_data_t.token(payload.asSlice(0L, lore_auth_identity_event_data_t.SIZE))))
             11 -> BranchCreateEvent(name = LoreCopy.string(lore_branch_create_event_data_t.name(payload.asSlice(0L, lore_branch_create_event_data_t.SIZE))), latest = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_create_event_data_t.latest(payload.asSlice(0L, lore_branch_create_event_data_t.SIZE)))), is_commit = lore_branch_create_event_data_t.is_commit(payload.asSlice(0L, lore_branch_create_event_data_t.SIZE)))
             12 -> BranchMultipleInstanceEvent(branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_multiple_instance_event_data_t.branch(payload.asSlice(0L, lore_branch_multiple_instance_event_data_t.SIZE)))), instance_ids = LoreCopy.array(lore_branch_multiple_instance_event_data_t.instance_ids(payload.asSlice(0L, lore_branch_multiple_instance_event_data_t.SIZE)), 16L) { LoreCopy.fixedBytes(lore_instance_id_t.data(it)) }, instance_paths = LoreCopy.array(lore_branch_multiple_instance_event_data_t.instance_paths(payload.asSlice(0L, lore_branch_multiple_instance_event_data_t.SIZE)), 16L) { LoreCopy.string(it) })
@@ -2453,15 +2548,15 @@ object LoreEventReader {
             63 -> RevertUnresolveRevisionEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_revert_unresolve_revision_event_data_t.repository(payload.asSlice(0L, lore_revert_unresolve_revision_event_data_t.SIZE)))), revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_revert_unresolve_revision_event_data_t.revision(payload.asSlice(0L, lore_revert_unresolve_revision_event_data_t.SIZE)))))
             64 -> BranchProtectEvent(name = LoreCopy.string(lore_branch_protect_event_data_t.name(payload.asSlice(0L, lore_branch_protect_event_data_t.SIZE))))
             65 -> BranchPushEvent(remote = LoreCopy.string(lore_branch_push_event_data_t.remote(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE))), repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_branch_push_event_data_t.repository(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE)))), branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_push_event_data_t.branch(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE)))), branch_name = LoreCopy.string(lore_branch_push_event_data_t.branch_name(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE))), remote_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_event_data_t.remote_revision(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE)))), local_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_event_data_t.local_revision(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE)))), remote_history = lore_branch_push_event_data_t.remote_history(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE)), local_history = lore_branch_push_event_data_t.local_history(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE)), flag_already_pushed = lore_branch_push_event_data_t.flag_already_pushed(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE)), flag_default = lore_branch_push_event_data_t.flag_default(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE)), flag_link = lore_branch_push_event_data_t.flag_link(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE)), flag_layer = lore_branch_push_event_data_t.flag_layer(payload.asSlice(0L, lore_branch_push_event_data_t.SIZE)))
-            66 -> BranchPushRevisionUpdateBeginEvent(revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_update_begin_event_data_t.revision(payload.asSlice(0L, lore_branch_push_revision_update_begin_event_data_t.SIZE)))), old_parent = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_update_begin_event_data_t.old_parent(payload.asSlice(0L, lore_branch_push_revision_update_begin_event_data_t.SIZE)))), new_parent = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_update_begin_event_data_t.new_parent(payload.asSlice(0L, lore_branch_push_revision_update_begin_event_data_t.SIZE)))))
-            67 -> BranchPushRevisionUpdateEndEvent(revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_update_end_event_data_t.revision(payload.asSlice(0L, lore_branch_push_revision_update_end_event_data_t.SIZE)))))
-            68 -> BranchPushFragmentBeginEvent(fragments = lore_branch_push_fragment_begin_event_data_t.fragments(payload.asSlice(0L, lore_branch_push_fragment_begin_event_data_t.SIZE)), bytes_total = lore_branch_push_fragment_begin_event_data_t.bytes_total(payload.asSlice(0L, lore_branch_push_fragment_begin_event_data_t.SIZE)))
-            69 -> BranchPushFragmentProgressEvent(complete = lore_branch_push_fragment_progress_event_data_t.complete(payload.asSlice(0L, lore_branch_push_fragment_progress_event_data_t.SIZE)), count = lore_branch_push_fragment_progress_event_data_t.count(payload.asSlice(0L, lore_branch_push_fragment_progress_event_data_t.SIZE)), bytes_transferred = lore_branch_push_fragment_progress_event_data_t.bytes_transferred(payload.asSlice(0L, lore_branch_push_fragment_progress_event_data_t.SIZE)), bytes_total = lore_branch_push_fragment_progress_event_data_t.bytes_total(payload.asSlice(0L, lore_branch_push_fragment_progress_event_data_t.SIZE)))
-            70 -> BranchPushFragmentEndEvent(fragments = lore_branch_push_fragment_end_event_data_t.fragments(payload.asSlice(0L, lore_branch_push_fragment_end_event_data_t.SIZE)), bytes_transferred = lore_branch_push_fragment_end_event_data_t.bytes_transferred(payload.asSlice(0L, lore_branch_push_fragment_end_event_data_t.SIZE)))
+            66 -> BranchPushRevisionUpdateBeginEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_branch_push_revision_update_begin_event_data_t.repository(payload.asSlice(0L, lore_branch_push_revision_update_begin_event_data_t.SIZE)))), branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_push_revision_update_begin_event_data_t.branch(payload.asSlice(0L, lore_branch_push_revision_update_begin_event_data_t.SIZE)))), revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_update_begin_event_data_t.revision(payload.asSlice(0L, lore_branch_push_revision_update_begin_event_data_t.SIZE)))), old_parent = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_update_begin_event_data_t.old_parent(payload.asSlice(0L, lore_branch_push_revision_update_begin_event_data_t.SIZE)))), new_parent = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_update_begin_event_data_t.new_parent(payload.asSlice(0L, lore_branch_push_revision_update_begin_event_data_t.SIZE)))))
+            67 -> BranchPushRevisionUpdateEndEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_branch_push_revision_update_end_event_data_t.repository(payload.asSlice(0L, lore_branch_push_revision_update_end_event_data_t.SIZE)))), branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_push_revision_update_end_event_data_t.branch(payload.asSlice(0L, lore_branch_push_revision_update_end_event_data_t.SIZE)))), revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_update_end_event_data_t.revision(payload.asSlice(0L, lore_branch_push_revision_update_end_event_data_t.SIZE)))))
+            68 -> BranchPushFragmentBeginEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_branch_push_fragment_begin_event_data_t.repository(payload.asSlice(0L, lore_branch_push_fragment_begin_event_data_t.SIZE)))), branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_push_fragment_begin_event_data_t.branch(payload.asSlice(0L, lore_branch_push_fragment_begin_event_data_t.SIZE)))), fragments = lore_branch_push_fragment_begin_event_data_t.fragments(payload.asSlice(0L, lore_branch_push_fragment_begin_event_data_t.SIZE)), bytes_total = lore_branch_push_fragment_begin_event_data_t.bytes_total(payload.asSlice(0L, lore_branch_push_fragment_begin_event_data_t.SIZE)))
+            69 -> BranchPushFragmentProgressEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_branch_push_fragment_progress_event_data_t.repository(payload.asSlice(0L, lore_branch_push_fragment_progress_event_data_t.SIZE)))), branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_push_fragment_progress_event_data_t.branch(payload.asSlice(0L, lore_branch_push_fragment_progress_event_data_t.SIZE)))), complete = lore_branch_push_fragment_progress_event_data_t.complete(payload.asSlice(0L, lore_branch_push_fragment_progress_event_data_t.SIZE)), count = lore_branch_push_fragment_progress_event_data_t.count(payload.asSlice(0L, lore_branch_push_fragment_progress_event_data_t.SIZE)), bytes_transferred = lore_branch_push_fragment_progress_event_data_t.bytes_transferred(payload.asSlice(0L, lore_branch_push_fragment_progress_event_data_t.SIZE)), bytes_total = lore_branch_push_fragment_progress_event_data_t.bytes_total(payload.asSlice(0L, lore_branch_push_fragment_progress_event_data_t.SIZE)))
+            70 -> BranchPushFragmentEndEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_branch_push_fragment_end_event_data_t.repository(payload.asSlice(0L, lore_branch_push_fragment_end_event_data_t.SIZE)))), branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_push_fragment_end_event_data_t.branch(payload.asSlice(0L, lore_branch_push_fragment_end_event_data_t.SIZE)))), fragments = lore_branch_push_fragment_end_event_data_t.fragments(payload.asSlice(0L, lore_branch_push_fragment_end_event_data_t.SIZE)), bytes_transferred = lore_branch_push_fragment_end_event_data_t.bytes_transferred(payload.asSlice(0L, lore_branch_push_fragment_end_event_data_t.SIZE)))
             71 -> BranchPushBranchCreateBeginEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_branch_push_branch_create_begin_event_data_t.repository(payload.asSlice(0L, lore_branch_push_branch_create_begin_event_data_t.SIZE)))), branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_push_branch_create_begin_event_data_t.branch(payload.asSlice(0L, lore_branch_push_branch_create_begin_event_data_t.SIZE)))), local_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_branch_create_begin_event_data_t.local_revision(payload.asSlice(0L, lore_branch_push_branch_create_begin_event_data_t.SIZE)))))
-            72 -> BranchPushBranchCreateEndEvent(remote_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_branch_create_end_event_data_t.remote_revision(payload.asSlice(0L, lore_branch_push_branch_create_end_event_data_t.SIZE)))))
+            72 -> BranchPushBranchCreateEndEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_branch_push_branch_create_end_event_data_t.repository(payload.asSlice(0L, lore_branch_push_branch_create_end_event_data_t.SIZE)))), branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_push_branch_create_end_event_data_t.branch(payload.asSlice(0L, lore_branch_push_branch_create_end_event_data_t.SIZE)))), remote_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_branch_create_end_event_data_t.remote_revision(payload.asSlice(0L, lore_branch_push_branch_create_end_event_data_t.SIZE)))))
             73 -> BranchPushRevisionPushBeginEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_branch_push_revision_push_begin_event_data_t.repository(payload.asSlice(0L, lore_branch_push_revision_push_begin_event_data_t.SIZE)))), branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_push_revision_push_begin_event_data_t.branch(payload.asSlice(0L, lore_branch_push_revision_push_begin_event_data_t.SIZE)))), remote_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_push_begin_event_data_t.remote_revision(payload.asSlice(0L, lore_branch_push_revision_push_begin_event_data_t.SIZE)))), local_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_push_begin_event_data_t.local_revision(payload.asSlice(0L, lore_branch_push_revision_push_begin_event_data_t.SIZE)))))
-            74 -> BranchPushRevisionPushUpdateEvent(old_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_push_update_event_data_t.old_revision(payload.asSlice(0L, lore_branch_push_revision_push_update_event_data_t.SIZE)))), new_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_push_update_event_data_t.new_revision(payload.asSlice(0L, lore_branch_push_revision_push_update_event_data_t.SIZE)))), new_revision_number = lore_branch_push_revision_push_update_event_data_t.new_revision_number(payload.asSlice(0L, lore_branch_push_revision_push_update_event_data_t.SIZE)))
+            74 -> BranchPushRevisionPushUpdateEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_branch_push_revision_push_update_event_data_t.repository(payload.asSlice(0L, lore_branch_push_revision_push_update_event_data_t.SIZE)))), branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_push_revision_push_update_event_data_t.branch(payload.asSlice(0L, lore_branch_push_revision_push_update_event_data_t.SIZE)))), old_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_push_update_event_data_t.old_revision(payload.asSlice(0L, lore_branch_push_revision_push_update_event_data_t.SIZE)))), new_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_push_update_event_data_t.new_revision(payload.asSlice(0L, lore_branch_push_revision_push_update_event_data_t.SIZE)))), new_revision_number = lore_branch_push_revision_push_update_event_data_t.new_revision_number(payload.asSlice(0L, lore_branch_push_revision_push_update_event_data_t.SIZE)))
             75 -> BranchPushRevisionPushEndEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_branch_push_revision_push_end_event_data_t.repository(payload.asSlice(0L, lore_branch_push_revision_push_end_event_data_t.SIZE)))), branch = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_push_revision_push_end_event_data_t.branch(payload.asSlice(0L, lore_branch_push_revision_push_end_event_data_t.SIZE)))), old_remote_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_push_end_event_data_t.old_remote_revision(payload.asSlice(0L, lore_branch_push_revision_push_end_event_data_t.SIZE)))), new_remote_revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_push_revision_push_end_event_data_t.new_remote_revision(payload.asSlice(0L, lore_branch_push_revision_push_end_event_data_t.SIZE)))), new_remote_revision_number = lore_branch_push_revision_push_end_event_data_t.new_remote_revision_number(payload.asSlice(0L, lore_branch_push_revision_push_end_event_data_t.SIZE)), message = LoreCopy.string(lore_branch_push_revision_push_end_event_data_t.message(payload.asSlice(0L, lore_branch_push_revision_push_end_event_data_t.SIZE))), fast_forward_merged = lore_branch_push_revision_push_end_event_data_t.fast_forward_merged(payload.asSlice(0L, lore_branch_push_revision_push_end_event_data_t.SIZE)))
             76 -> BranchResetEvent(id = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_reset_event_data_t.id(payload.asSlice(0L, lore_branch_reset_event_data_t.SIZE)))), name = LoreCopy.string(lore_branch_reset_event_data_t.name(payload.asSlice(0L, lore_branch_reset_event_data_t.SIZE))), revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_reset_event_data_t.revision(payload.asSlice(0L, lore_branch_reset_event_data_t.SIZE)))))
             77 -> BranchSwitchBeginEvent(branch = BranchSwitchData(id = LoreCopy.fixedBytes(lore_context_t.data(lore_branch_switch_data_t.id(lore_branch_switch_begin_event_data_t.branch(payload.asSlice(0L, lore_branch_switch_begin_event_data_t.SIZE))))), name = LoreCopy.string(lore_branch_switch_data_t.name(lore_branch_switch_begin_event_data_t.branch(payload.asSlice(0L, lore_branch_switch_begin_event_data_t.SIZE)))), latest_local = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_switch_data_t.latest_local(lore_branch_switch_begin_event_data_t.branch(payload.asSlice(0L, lore_branch_switch_begin_event_data_t.SIZE))))), latest_remote = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_switch_data_t.latest_remote(lore_branch_switch_begin_event_data_t.branch(payload.asSlice(0L, lore_branch_switch_begin_event_data_t.SIZE))))), revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_branch_switch_data_t.revision(lore_branch_switch_begin_event_data_t.branch(payload.asSlice(0L, lore_branch_switch_begin_event_data_t.SIZE))))), location = lore_branch_switch_data_t.location(lore_branch_switch_begin_event_data_t.branch(payload.asSlice(0L, lore_branch_switch_begin_event_data_t.SIZE)))))
@@ -2625,6 +2720,14 @@ object LoreEventReader {
             235 -> AuthPendingEvent(elapsed_secs = lore_auth_pending_event_data_t.elapsed_secs(payload.asSlice(0L, lore_auth_pending_event_data_t.SIZE)), interval_secs = lore_auth_pending_event_data_t.interval_secs(payload.asSlice(0L, lore_auth_pending_event_data_t.SIZE)), remaining_secs = lore_auth_pending_event_data_t.remaining_secs(payload.asSlice(0L, lore_auth_pending_event_data_t.SIZE)))
             236 -> StorageGetFragmentEvent(id = lore_storage_get_fragment_event_data_t.id(payload.asSlice(0L, lore_storage_get_fragment_event_data_t.SIZE)), address = Address(hash = LoreCopy.fixedBytes(lore_hash_t.data(lore_address_t.hash(lore_storage_get_fragment_event_data_t.address(payload.asSlice(0L, lore_storage_get_fragment_event_data_t.SIZE))))), context = LoreCopy.fixedBytes(lore_context_t.data(lore_address_t.context(lore_storage_get_fragment_event_data_t.address(payload.asSlice(0L, lore_storage_get_fragment_event_data_t.SIZE)))))), offset = lore_storage_get_fragment_event_data_t.offset(payload.asSlice(0L, lore_storage_get_fragment_event_data_t.SIZE)), fragment = Fragment(flags = lore_fragment_t.flags(lore_storage_get_fragment_event_data_t.fragment(payload.asSlice(0L, lore_storage_get_fragment_event_data_t.SIZE))), size_payload = lore_fragment_t.size_payload(lore_storage_get_fragment_event_data_t.fragment(payload.asSlice(0L, lore_storage_get_fragment_event_data_t.SIZE))), size_content = lore_fragment_t.size_content(lore_storage_get_fragment_event_data_t.fragment(payload.asSlice(0L, lore_storage_get_fragment_event_data_t.SIZE)))), bytes = LoreCopy.bytes(lore_storage_get_fragment_event_data_t.bytes(payload.asSlice(0L, lore_storage_get_fragment_event_data_t.SIZE)), lore_bytes_t.len(lore_storage_get_fragment_event_data_t.bytes(payload.asSlice(0L, lore_storage_get_fragment_event_data_t.SIZE)))))
             237 -> FileAuditEvent(repository = LoreCopy.fixedBytes(lore_partition_t.data(lore_file_audit_event_data_t.repository(payload.asSlice(0L, lore_file_audit_event_data_t.SIZE)))), revision = LoreCopy.fixedBytes(lore_hash_t.data(lore_file_audit_event_data_t.revision(payload.asSlice(0L, lore_file_audit_event_data_t.SIZE)))), line_first = lore_file_audit_event_data_t.line_first(payload.asSlice(0L, lore_file_audit_event_data_t.SIZE)), line_last = lore_file_audit_event_data_t.line_last(payload.asSlice(0L, lore_file_audit_event_data_t.SIZE)), outcome = lore_file_audit_event_data_t.outcome(payload.asSlice(0L, lore_file_audit_event_data_t.SIZE)))
+            238 -> RepositoryInstanceDeleteBeginEvent(instance_id = LoreCopy.fixedBytes(lore_instance_id_t.data(lore_repository_instance_delete_begin_event_data_t.instance_id(payload.asSlice(0L, lore_repository_instance_delete_begin_event_data_t.SIZE)))), path = LoreCopy.string(lore_repository_instance_delete_begin_event_data_t.path(payload.asSlice(0L, lore_repository_instance_delete_begin_event_data_t.SIZE))), is_swfs = lore_repository_instance_delete_begin_event_data_t.is_swfs(payload.asSlice(0L, lore_repository_instance_delete_begin_event_data_t.SIZE)))
+            239 -> RepositoryInstanceDeleteProgressEvent(phase = lore_repository_instance_delete_progress_event_data_t.phase(payload.asSlice(0L, lore_repository_instance_delete_progress_event_data_t.SIZE)))
+            240 -> RepositoryInstanceDeleteCompleteEvent(instance_id = LoreCopy.fixedBytes(lore_instance_id_t.data(lore_repository_instance_delete_complete_event_data_t.instance_id(payload.asSlice(0L, lore_repository_instance_delete_complete_event_data_t.SIZE)))))
+            241 -> RepositoryInstanceMoveBeginEvent(instance_id = LoreCopy.fixedBytes(lore_instance_id_t.data(lore_repository_instance_move_begin_event_data_t.instance_id(payload.asSlice(0L, lore_repository_instance_move_begin_event_data_t.SIZE)))), source_path = LoreCopy.string(lore_repository_instance_move_begin_event_data_t.source_path(payload.asSlice(0L, lore_repository_instance_move_begin_event_data_t.SIZE))), target_path = LoreCopy.string(lore_repository_instance_move_begin_event_data_t.target_path(payload.asSlice(0L, lore_repository_instance_move_begin_event_data_t.SIZE))))
+            242 -> RepositoryInstanceMoveCompleteEvent(instance_id = LoreCopy.fixedBytes(lore_instance_id_t.data(lore_repository_instance_move_complete_event_data_t.instance_id(payload.asSlice(0L, lore_repository_instance_move_complete_event_data_t.SIZE)))), target_path = LoreCopy.string(lore_repository_instance_move_complete_event_data_t.target_path(payload.asSlice(0L, lore_repository_instance_move_complete_event_data_t.SIZE))))
+            243 -> RepositoryInstanceCloneBeginEvent(instance_id = LoreCopy.fixedBytes(lore_instance_id_t.data(lore_repository_instance_clone_begin_event_data_t.instance_id(payload.asSlice(0L, lore_repository_instance_clone_begin_event_data_t.SIZE)))), source_path = LoreCopy.string(lore_repository_instance_clone_begin_event_data_t.source_path(payload.asSlice(0L, lore_repository_instance_clone_begin_event_data_t.SIZE))), target_path = LoreCopy.string(lore_repository_instance_clone_begin_event_data_t.target_path(payload.asSlice(0L, lore_repository_instance_clone_begin_event_data_t.SIZE))), method = lore_repository_instance_clone_begin_event_data_t.method(payload.asSlice(0L, lore_repository_instance_clone_begin_event_data_t.SIZE)), filesystem = LoreCopy.string(lore_repository_instance_clone_begin_event_data_t.filesystem(payload.asSlice(0L, lore_repository_instance_clone_begin_event_data_t.SIZE))), mount_point = LoreCopy.string(lore_repository_instance_clone_begin_event_data_t.mount_point(payload.asSlice(0L, lore_repository_instance_clone_begin_event_data_t.SIZE))), size = lore_repository_instance_clone_begin_event_data_t.size(payload.asSlice(0L, lore_repository_instance_clone_begin_event_data_t.SIZE)), file_count = lore_repository_instance_clone_begin_event_data_t.file_count(payload.asSlice(0L, lore_repository_instance_clone_begin_event_data_t.SIZE)), available_size = lore_repository_instance_clone_begin_event_data_t.available_size(payload.asSlice(0L, lore_repository_instance_clone_begin_event_data_t.SIZE)), reason = LoreCopy.string(lore_repository_instance_clone_begin_event_data_t.reason(payload.asSlice(0L, lore_repository_instance_clone_begin_event_data_t.SIZE))))
+            244 -> RepositoryInstanceCloneProgressEvent(phase = lore_repository_instance_clone_progress_event_data_t.phase(payload.asSlice(0L, lore_repository_instance_clone_progress_event_data_t.SIZE)), path = LoreCopy.string(lore_repository_instance_clone_progress_event_data_t.path(payload.asSlice(0L, lore_repository_instance_clone_progress_event_data_t.SIZE))), cloned_directory_count = lore_repository_instance_clone_progress_event_data_t.cloned_directory_count(payload.asSlice(0L, lore_repository_instance_clone_progress_event_data_t.SIZE)), cloned_entry_count = lore_repository_instance_clone_progress_event_data_t.cloned_entry_count(payload.asSlice(0L, lore_repository_instance_clone_progress_event_data_t.SIZE)), copied_file_count = lore_repository_instance_clone_progress_event_data_t.copied_file_count(payload.asSlice(0L, lore_repository_instance_clone_progress_event_data_t.SIZE)))
+            245 -> RepositoryInstanceCloneCompleteEvent(instance_id = LoreCopy.fixedBytes(lore_instance_id_t.data(lore_repository_instance_clone_complete_event_data_t.instance_id(payload.asSlice(0L, lore_repository_instance_clone_complete_event_data_t.SIZE)))), target_path = LoreCopy.string(lore_repository_instance_clone_complete_event_data_t.target_path(payload.asSlice(0L, lore_repository_instance_clone_complete_event_data_t.SIZE))), cloned_directory_count = lore_repository_instance_clone_complete_event_data_t.cloned_directory_count(payload.asSlice(0L, lore_repository_instance_clone_complete_event_data_t.SIZE)), cloned_entry_count = lore_repository_instance_clone_complete_event_data_t.cloned_entry_count(payload.asSlice(0L, lore_repository_instance_clone_complete_event_data_t.SIZE)), copied_file_count = lore_repository_instance_clone_complete_event_data_t.copied_file_count(payload.asSlice(0L, lore_repository_instance_clone_complete_event_data_t.SIZE)))
             else -> UnknownEvent(lore_event_t.tag(event))
         }
     }
